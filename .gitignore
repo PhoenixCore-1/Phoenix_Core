@@ -1,0 +1,85 @@
+﻿# =========================================================
+# PHOENIX CORE V1
+# Git Ignore
+# =========================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local development data
+.local/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Node / frontend dependencies
+node_modules/
+frontend/**/node_modules/
+
+# Frontend build output
+frontend/**/dist/
+frontend/**/build/
+frontend/**/.vite/
+
+# Vite
+.vite/
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+~$*
+
+# Test / coverage output
+coverage/
+.nyc_output/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+# TypeScript
+*.tsbuildinfo

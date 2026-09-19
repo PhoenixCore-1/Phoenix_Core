@@ -1,4 +1,4 @@
-"""FastAPI transport adapter for Phoenix Core.
+﻿"""FastAPI transport adapter for Phoenix Core.
 
 The adapter owns HTTP concerns only. Business authority remains in CoreApi
 and Core application services.
@@ -20,6 +20,8 @@ from phoenix_core.errors import (
     ValidationError,
 )
 from phoenix_core.http_api.baseline import router as baseline_router
+from phoenix_core.http_api.legal import router as legal_router
+from phoenix_core.http_api.ip import router as ip_router
 from phoenix_core.http_api.company import router as company_router
 from phoenix_core.http_api.compliance import router as compliance_router
 from phoenix_core.http_api.evidence import router as evidence_router
@@ -477,6 +479,8 @@ def create_development_app(
 
     app.include_router(company_router)
     app.include_router(baseline_router)
+    app.include_router(legal_router)
+    app.include_router(ip_router)
     app.include_router(compliance_router)
     app.include_router(evidence_router)
     app.include_router(monitoring_router)

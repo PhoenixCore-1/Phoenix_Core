@@ -1,0 +1,15 @@
+﻿ALTER TABLE organisations ADD COLUMN legal_name TEXT;
+ALTER TABLE organisations ADD COLUMN trading_name TEXT;
+ALTER TABLE organisations ADD COLUMN registration_number TEXT;
+ALTER TABLE organisations ADD COLUMN tax_number TEXT;
+ALTER TABLE organisations ADD COLUMN primary_email TEXT;
+ALTER TABLE organisations ADD COLUMN telephone TEXT;
+ALTER TABLE organisations ADD COLUMN website TEXT;
+ALTER TABLE organisations ADD COLUMN address_line_1 TEXT;
+ALTER TABLE organisations ADD COLUMN address_line_2 TEXT;
+ALTER TABLE organisations ADD COLUMN city TEXT;
+ALTER TABLE organisations ADD COLUMN province TEXT;
+ALTER TABLE organisations ADD COLUMN postal_code TEXT;
+ALTER TABLE organisations ADD COLUMN country TEXT;
+ALTER TABLE organisations ADD COLUMN industry TEXT;
+ALTER TABLE organisations ADD COLUMN company_type TEXT;

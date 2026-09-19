@@ -322,7 +322,11 @@ def company_detail(request: Request, organisation_id: UUID):
         raise AuthorizationError("System Platform access required.")
 
     company = api.db.execute(
-        "SELECT id,code,name,status,created_at "
+        "SELECT id,code,name,status,created_at,"
+        "legal_name,trading_name,registration_number,tax_number,"
+        "primary_email,telephone,website,"
+        "address_line_1,address_line_2,city,province,postal_code,country,"
+        "industry,company_type "
         "FROM organisations WHERE id=?",
         (str(organisation_id),),
     ).fetchone()
@@ -368,8 +372,77 @@ async def create_company(request: Request):
     name=str(payload.get("name","")).strip()
     if not code or not name:
         raise ValidationError("Company code and name are required.")
+
     company=api.core_service.create_organisation(code,name)
-    return {"data":{"id":str(company.id),"code":company.code,"name":company.name,"status":company.status}}
+
+    registration_fields = {
+        "legal_name": str(payload.get("legal_name","")).strip() or None,
+        "trading_name": str(payload.get("trading_name","")).strip() or None,
+        "registration_number": str(payload.get("registration_number","")).strip() or None,
+        "tax_number": str(payload.get("tax_number","")).strip() or None,
+        "primary_email": str(payload.get("primary_email","")).strip() or None,
+        "telephone": str(payload.get("telephone","")).strip() or None,
+        "website": str(payload.get("website","")).strip() or None,
+        "address_line_1": str(payload.get("address_line_1","")).strip() or None,
+        "address_line_2": str(payload.get("address_line_2","")).strip() or None,
+        "city": str(payload.get("city","")).strip() or None,
+        "province": str(payload.get("province","")).strip() or None,
+        "postal_code": str(payload.get("postal_code","")).strip() or None,
+        "country": str(payload.get("country","")).strip() or None,
+        "industry": str(payload.get("industry","")).strip() or None,
+        "company_type": str(payload.get("company_type","")).strip() or None,
+    }
+
+    api.db.execute(
+        """
+        UPDATE organisations
+        SET legal_name=?,
+            trading_name=?,
+            registration_number=?,
+            tax_number=?,
+            primary_email=?,
+            telephone=?,
+            website=?,
+            address_line_1=?,
+            address_line_2=?,
+            city=?,
+            province=?,
+            postal_code=?,
+            country=?,
+            industry=?,
+            company_type=?
+        WHERE id=?
+        """,
+        (
+            registration_fields["legal_name"],
+            registration_fields["trading_name"],
+            registration_fields["registration_number"],
+            registration_fields["tax_number"],
+            registration_fields["primary_email"],
+            registration_fields["telephone"],
+            registration_fields["website"],
+            registration_fields["address_line_1"],
+            registration_fields["address_line_2"],
+            registration_fields["city"],
+            registration_fields["province"],
+            registration_fields["postal_code"],
+            registration_fields["country"],
+            registration_fields["industry"],
+            registration_fields["company_type"],
+            str(company.id),
+        ),
+    )
+    api.db.commit()
+
+    return {
+        "data": {
+            "id":str(company.id),
+            "code":company.code,
+            "name":company.name,
+            "status":company.status,
+            **registration_fields,
+        }
+    }
 
 @router.get("/modules")
 def modules(request: Request):

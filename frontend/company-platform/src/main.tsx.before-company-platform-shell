@@ -22,13 +22,7 @@ type CompanyView =
   | 'home'
   | 'company'
   | 'users'
-  | 'roles'
-  | 'workspace'
-  | 'kpi'
-  | 'reporting'
-  | 'activity'
-  | 'settings'
-  | 'connect'
+  | 'modules'
 
 type UserView =
   | 'home'
@@ -2057,92 +2051,8 @@ function CompanyShell({
   const [view, setView] =
     useState<CompanyView>('home')
 
-  const [notificationsOpen, setNotificationsOpen] =
-    useState(false)
-
-  const [profileOpen, setProfileOpen] =
-    useState(false)
-
-  const [search, setSearch] =
-    useState('')
-
-  const navigation: {
-    view: CompanyView
-    label: string
-    icon: string
-  }[] = [
-    { view: 'company', label: 'Company Profile', icon: '▣' },
-    { view: 'users', label: 'Users', icon: '♙' },
-    { view: 'roles', label: 'Roles', icon: '◆' },
-    { view: 'workspace', label: 'Workspace', icon: '⌘' },
-    { view: 'kpi', label: 'KPI', icon: '◈' },
-    { view: 'reporting', label: 'Reporting', icon: '▥' },
-    { view: 'activity', label: 'Activity', icon: '◷' },
-    { view: 'settings', label: 'Company Settings', icon: '⚙' },
-    { view: 'connect', label: 'Phoenix Connect', icon: '↔' },
-  ]
-
-  const placeholderTitles: Record<
-    Exclude<CompanyView, 'home' | 'company' | 'users'>,
-    {
-      eyebrow: string
-      title: string
-      description: string
-    }
-  > = {
-    roles: {
-      eyebrow: 'COMPANY ROLES',
-      title: 'Roles',
-      description:
-        'Create company roles and control what users can see and access.',
-    },
-    workspace: {
-      eyebrow: 'WORKSPACE',
-      title: 'Workspace',
-      description:
-        'Connect ERP and existing software through APIs and import CSV data for Phoenix modules.',
-    },
-    kpi: {
-      eyebrow: 'COMPANY KPI',
-      title: 'KPI',
-      description:
-        'Role-based KPI visibility for users across the company.',
-    },
-    reporting: {
-      eyebrow: 'COMPANY REPORTING',
-      title: 'Reporting',
-      description:
-        'Company-wide reports filtered by the permissions of the current user.',
-    },
-    activity: {
-      eyebrow: 'COMPANY ACTIVITY',
-      title: 'Activity',
-      description:
-        'Company-wide audit and activity history.',
-    },
-    settings: {
-      eyebrow: 'COMPANY SETTINGS',
-      title: 'Company Settings',
-      description:
-        'Configure settings for the current company.',
-    },
-    connect: {
-      eyebrow: 'PHOENIX CONNECT',
-      title: 'Phoenix Connect',
-      description:
-        'Company communication and integration services.',
-    },
-  }
-
-  const selectedPlaceholder =
-    view !== 'home' &&
-    view !== 'company' &&
-    view !== 'users'
-      ? placeholderTitles[view]
-      : null
-
   return (
-    <div className="shell company-platform-shell">
+    <div className="shell">
       <aside>
         <div className="brand">
           <img
@@ -2169,31 +2079,50 @@ function CompanyShell({
               setView('home')
             }
           >
-            <span className="company-nav-icon">⌂</span>
             Home
           </button>
 
-          {navigation.map((item) => (
-            <button
-              key={item.view}
-              type="button"
-              className={
-                view === item.view
-                  ? 'active'
-                  : ''
-              }
-              onClick={() => {
-                setNotificationsOpen(false)
-                setView(item.view)
-              }}
-            >
-              <span className="company-nav-icon">
-                {item.icon}
-              </span>
+          <button
+            type="button"
+            className={
+              view === 'company'
+                ? 'active'
+                : ''
+            }
+            onClick={() =>
+              setView('company')
+            }
+          >
+            Company
+          </button>
 
-              {item.label}
-            </button>
-          ))}
+          <button
+            type="button"
+            className={
+              view === 'users'
+                ? 'active'
+                : ''
+            }
+            onClick={() =>
+              setView('users')
+            }
+          >
+            Users
+          </button>
+
+          <button
+            type="button"
+            className={
+              view === 'modules'
+                ? 'active'
+                : ''
+            }
+            onClick={() =>
+              setView('modules')
+            }
+          >
+            Business Modules
+          </button>
         </nav>
 
         <div className="side-foot">
@@ -2202,8 +2131,8 @@ function CompanyShell({
       </aside>
 
       <main>
-        <header className="company-topbar">
-          <div className="company-topbar-heading">
+        <header>
+          <div>
             <span className="eyebrow">
               PHOENIX
             </span>
@@ -2213,205 +2142,17 @@ function CompanyShell({
             </h2>
           </div>
 
-          <div className="company-topbar-actions">
-            <div className="company-search">
-              <span
-                className="company-search-icon"
-                aria-hidden="true"
-              >
-                ⌕
-              </span>
-
-              <input
-                type="search"
-                placeholder="Search company..."
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-              />
-            </div>
+          <div className="account">
+            <span>
+              {context.user.display_name}
+            </span>
 
             <button
               type="button"
-              className="company-ai-button"
-              title="Phoenix AI"
-              onClick={() => {
-                setNotificationsOpen(false)
-              }}
+              onClick={onLogout}
             >
-              <span>✦</span>
-              AI
+              Sign out
             </button>
-
-            <div className="company-notification-wrap">
-              <button
-                type="button"
-                className={
-                  notificationsOpen
-                    ? 'company-icon-button active'
-                    : 'company-icon-button'
-                }
-                title="Company notifications"
-                aria-label="Company notifications"
-                onClick={() =>
-                  setNotificationsOpen(
-                    !notificationsOpen,
-                  )
-                }
-              >
-                <svg
-                  className="company-bell-icon"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
-                  />
-                  <path
-                    d="M10 21h4"
-                  />
-                </svg>
-
-                <span className="company-notification-dot" />
-              </button>
-
-              {notificationsOpen && (
-                <div className="company-notification-panel">
-                  <div className="company-notification-header">
-                    <div>
-                      <span className="eyebrow">
-                        COMPANY
-                      </span>
-
-                      <strong>
-                        Notifications
-                      </strong>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="company-notification-close"
-                      onClick={() =>
-                        setNotificationsOpen(false)
-                      }
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  <div className="company-notification-empty">
-                    <div className="company-notification-empty-icon">
-                      ♧
-                    </div>
-
-                    <strong>
-                      No new notifications
-                    </strong>
-
-                    <span>
-                      Company notifications will appear
-                      here.
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="company-profile-wrap">
-              <button
-                type="button"
-                className={
-                  profileOpen
-                    ? 'company-profile-button active'
-                    : 'company-profile-button'
-                }
-                onClick={() => {
-                  setNotificationsOpen(false)
-                  setProfileOpen(!profileOpen)
-                }}
-                aria-label="User profile"
-                aria-expanded={profileOpen}
-              >
-                <span className="company-profile-avatar">
-                  {String(
-                    context.user.display_name || '?',
-                  )
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
-
-                <span className="company-profile-name">
-                  {context.user.display_name}
-                </span>
-
-                <span className="company-profile-chevron">
-                  {profileOpen ? '⌃' : '⌄'}
-                </span>
-              </button>
-
-              {profileOpen && (
-                <div className="company-profile-menu">
-                  <div className="company-profile-menu-header">
-                    <span className="company-profile-avatar large">
-                      {String(
-                        context.user.display_name || '?',
-                      )
-                        .trim()
-                        .charAt(0)
-                        .toUpperCase()}
-                    </span>
-
-                    <div>
-                      <strong>
-                        {context.user.display_name}
-                      </strong>
-
-                      <span>
-                        Company Administrator
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="company-profile-menu-divider" />
-
-                  <button
-                    type="button"
-                    className="company-profile-menu-item"
-                    onClick={() => {
-                      setProfileOpen(false)
-                    }}
-                  >
-                    <span>♙</span>
-                    Profile
-                  </button>
-
-                  <button
-                    type="button"
-                    className="company-profile-menu-item"
-                    onClick={() => {
-                      setProfileOpen(false)
-                      setView('settings')
-                    }}
-                  >
-                    <span>⚙</span>
-                    Settings
-                  </button>
-
-                  <div className="company-profile-menu-divider" />
-
-                  <button
-                    type="button"
-                    className="company-profile-menu-item signout"
-                    onClick={onLogout}
-                  >
-                    <span>↪</span>
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </header>
 
@@ -2432,13 +2173,9 @@ function CompanyShell({
             <CompanyUsers />
           )}
 
-          {selectedPlaceholder && (
-            <Placeholder
-              eyebrow={selectedPlaceholder.eyebrow}
-              title={selectedPlaceholder.title}
-              description={
-                selectedPlaceholder.description
-              }
+          {view === 'modules' && (
+            <CompanyModules
+              context={context}
             />
           )}
         </section>
@@ -2446,201 +2183,31 @@ function CompanyShell({
     </div>
   )
 }
+
 function CompanyHome({
   context,
 }: {
   context: Context
 }) {
-  const activeModules =
-    context.modules.filter(
-      (module) => module.active,
-    )
-
   return (
-    <>
-      <div className="company-home-heading">
-        <div>
-          <span className="eyebrow">
-            COMPANY OVERVIEW
-          </span>
+    <div className="hero">
+      <span className="eyebrow">
+        COMPANY PLATFORM
+      </span>
 
-          <h1>
-            Welcome, {context.user.display_name}
-          </h1>
+      <h1>
+        {context.company?.name}
+      </h1>
 
-          <p className="muted">
-            Read-only operational visibility for
-            your company and your permitted KPIs.
-          </p>
-        </div>
-      </div>
-
-      <div className="company-home-grid">
-        <div className="panel company-home-kpi-panel">
-          <div className="company-home-panel-heading">
-            <div>
-              <span className="eyebrow">KPI</span>
-              <h3>Your operational KPIs</h3>
-            </div>
-
-            <span className="company-readonly-badge">
-              VIEW ONLY
-            </span>
-          </div>
-
-          <div className="company-kpi-empty">
-            <div className="company-kpi-symbol">◈</div>
-
-            <strong>Role-based KPIs</strong>
-
-            <span>
-              KPIs assigned to your company role
-              will appear here.
-            </span>
-          </div>
-        </div>
-
-        <div className="panel company-home-status-panel">
-          <div className="company-home-panel-heading">
-            <div>
-              <span className="eyebrow">
-                COMPANY STATUS
-              </span>
-              <h3>Operational status</h3>
-            </div>
-          </div>
-
-          <div className="company-status-list">
-            <div className="company-status-item">
-              <span>Company</span>
-              <strong>
-                {context.company?.name || 'Current company'}
-              </strong>
-            </div>
-
-            <div className="company-status-item">
-              <span>Company status</span>
-              <strong>
-                {context.company?.status || 'UNKNOWN'}
-              </strong>
-            </div>
-
-            <div className="company-status-item">
-              <span>Active modules</span>
-              <strong>{activeModules.length}</strong>
-            </div>
-
-            <div className="company-status-item">
-              <span>Access mode</span>
-              <strong>READ ONLY</strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel company-home-modules-panel">
-          <div className="company-home-panel-heading">
-            <div>
-              <span className="eyebrow">
-                ACTIVE MODULES
-              </span>
-              <h3>Available to your company</h3>
-            </div>
-
-            <span className="company-count-badge">
-              {activeModules.length}
-            </span>
-          </div>
-
-          {activeModules.length === 0 ? (
-            <div className="company-kpi-empty compact">
-              <strong>No active modules</strong>
-              <span>
-                Activated Phoenix modules will
-                appear here.
-              </span>
-            </div>
-          ) : (
-            <div className="company-module-list">
-              {activeModules.map((module) => (
-                <div
-                  className="company-module-status-row"
-                  key={module.id}
-                >
-                  <div>
-                    <strong>{module.name}</strong>
-                    <span>
-                      {module.code} · v{module.version}
-                    </span>
-                  </div>
-
-                  <span className="company-status-pill active">
-                    ACTIVE
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="panel company-home-integration-panel">
-          <div className="company-home-panel-heading">
-            <div>
-              <span className="eyebrow">
-                WORKSPACE / API
-              </span>
-              <h3>Integration status</h3>
-            </div>
-          </div>
-
-          <div className="company-integration-grid">
-            <div>
-              <span className="field-label">
-                API connection
-              </span>
-
-              <strong>Not connected</strong>
-
-              <span className="company-info-note">
-                Workspace integration is not yet
-                configured.
-              </span>
-            </div>
-
-            <div>
-              <span className="field-label">
-                Last company sync
-              </span>
-
-              <strong>Not available</strong>
-
-              <span className="company-info-note">
-                A real timestamp will appear once
-                Workspace sync is configured.
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="company-readonly-notice">
-        <span>ⓘ</span>
-
-        <div>
-          <strong>
-            Company Platform is view only
-          </strong>
-
-          <span>
-            Business transactions and operational
-            actions are performed in the User
-            Platform according to the user's role
-            and permissions.
-          </span>
-        </div>
-      </div>
-    </>
+      <p className="muted">
+        Company administration and
+        activated Phoenix business
+        modules.
+      </p>
+    </div>
   )
 }
+
 function CompanyDetails({
   context,
 }: {
@@ -2673,15 +2240,6 @@ function CompanyUsers() {
   const [users, setUsers] =
     useState<any[]>([])
 
-  const [selectedUserId, setSelectedUserId] =
-    useState<string | null>(null)
-
-  const [search, setSearch] =
-    useState('')
-
-  const [showAdd, setShowAdd] =
-    useState(false)
-
   const [form, setForm] =
     useState({
       username: '',
@@ -2699,16 +2257,9 @@ function CompanyUsers() {
           '/api/v1/baseline/company/users',
         )
 
-      const items = data.items || []
-
-      setUsers(items)
-
-      if (
-        !selectedUserId &&
-        items.length > 0
-      ) {
-        setSelectedUserId(items[0].id)
-      }
+      setUsers(
+        data.items || [],
+      )
     } catch (loadError) {
       setMessage(
         loadError instanceof Error
@@ -2740,7 +2291,9 @@ function CompanyUsers() {
         '/api/v1/baseline/company/users',
         {
           method: 'POST',
-          body: JSON.stringify(form),
+          body: JSON.stringify(
+            form,
+          ),
         },
       )
 
@@ -2750,9 +2303,9 @@ function CompanyUsers() {
         password: '',
       })
 
-      setMessage('User created.')
-
-      setShowAdd(false)
+      setMessage(
+        'User created.',
+      )
 
       await load()
     } catch (addError) {
@@ -2764,398 +2317,107 @@ function CompanyUsers() {
     }
   }
 
-  const filteredUsers =
-    users.filter((user) => {
-      const term =
-        search.trim().toLowerCase()
-
-      if (!term) {
-        return true
-      }
-
-      return (
-        String(user.display_name || '')
-          .toLowerCase()
-          .includes(term) ||
-        String(user.username || '')
-          .toLowerCase()
-          .includes(term)
-      )
-    })
-
-  const selectedUser =
-    users.find(
-      (user) =>
-        user.id === selectedUserId,
-    ) || null
-
   return (
     <>
-      <div className="company-page-heading">
-        <div>
-          <span className="eyebrow">
-            COMPANY USERS
-          </span>
+      <div className="hero">
+        <span className="eyebrow">
+          COMPANY USERS
+        </span>
 
-          <h1>Users</h1>
+        <h1>
+          Users
+        </h1>
 
-          <p className="muted">
-            Manage users belonging to
-            this company.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className="company-primary-action"
-          onClick={() => {
-            setMessage('')
-            setShowAdd(true)
-          }}
-        >
-          + Add User
-        </button>
+        <p className="muted">
+          Manage users belonging to
+          this company.
+        </p>
       </div>
 
-      {message && (
-        <div className="company-feedback">
-          {message}
+      <div className="panel">
+        <h3>
+          Add user
+        </h3>
+
+        <div className="row">
+          <input
+            placeholder="Username"
+            value={form.username}
+            onChange={(event) =>
+              setForm({
+                ...form,
+                username:
+                  event.target.value,
+              })
+            }
+          />
+
+          <input
+            placeholder="Display name"
+            value={form.display_name}
+            onChange={(event) =>
+              setForm({
+                ...form,
+                display_name:
+                  event.target.value,
+              })
+            }
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={(event) =>
+              setForm({
+                ...form,
+                password:
+                  event.target.value,
+              })
+            }
+          />
+
+          <button
+            type="button"
+            onClick={add}
+          >
+            Add user
+          </button>
         </div>
-      )}
 
-      <div className="company-users-layout">
-        <div className="panel company-users-list-panel">
-          <div className="company-panel-heading">
-            <div>
-              <span className="eyebrow">
-                USERS
-              </span>
+        {message && (
+          <p>{message}</p>
+        )}
+      </div>
 
-              <h3>
-                Company users
-              </h3>
-            </div>
+      <div className="panel">
+        <h3>
+          Users
+        </h3>
 
-            <span className="company-count-badge">
-              {filteredUsers.length}
+        {users.map((user) => (
+          <div
+            className="list"
+            key={user.id}
+          >
+            <strong>
+              {user.display_name}
+            </strong>
+
+            <span>
+              {user.username}
+            </span>
+
+            <span>
+              {user.platform_level}
             </span>
           </div>
-
-          <div className="company-user-search">
-            <span>⌕</span>
-
-            <input
-              type="search"
-              placeholder="Search users..."
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-            />
-          </div>
-
-          <div className="company-user-list">
-            {filteredUsers.length === 0 && (
-              <div className="company-empty-state">
-                <strong>
-                  No users found
-                </strong>
-
-                <span>
-                  Try another search or add a
-                  new company user.
-                </span>
-              </div>
-            )}
-
-            {filteredUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                className={
-                  user.id === selectedUserId
-                    ? 'company-user-row selected'
-                    : 'company-user-row'
-                }
-                onClick={() =>
-                  setSelectedUserId(user.id)
-                }
-              >
-                <span className="company-user-avatar">
-                  {String(
-                    user.display_name ||
-                      user.username ||
-                      '?',
-                  )
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
-
-                <span className="company-user-row-main">
-                  <strong>
-                    {user.display_name}
-                  </strong>
-
-                  <span>
-                    @{user.username}
-                  </span>
-                </span>
-
-                <span
-                  className={
-                    String(user.status)
-                      .toUpperCase() ===
-                    'ACTIVE'
-                      ? 'company-status-pill active'
-                      : 'company-status-pill'
-                  }
-                >
-                  {user.status}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel company-user-details-panel">
-          {!selectedUser && (
-            <div className="company-empty-details">
-              <div>
-                <span className="eyebrow">
-                  USER DETAILS
-                </span>
-
-                <h3>
-                  Select a user
-                </h3>
-
-                <p className="muted">
-                  Select a company user to view
-                  their account information.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {selectedUser && (
-            <>
-              <div className="company-user-profile-heading">
-                <span className="company-user-avatar large">
-                  {String(
-                    selectedUser.display_name ||
-                      selectedUser.username ||
-                      '?',
-                  )
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
-
-                <div>
-                  <span className="eyebrow">
-                    USER DETAILS
-                  </span>
-
-                  <h2>
-                    {selectedUser.display_name}
-                  </h2>
-
-                  <p>
-                    @{selectedUser.username}
-                  </p>
-                </div>
-              </div>
-
-              <div className="company-user-status-strip">
-                <div>
-                  <span className="field-label">
-                    Account status
-                  </span>
-
-                  <strong>
-                    {selectedUser.status}
-                  </strong>
-                </div>
-
-                <div>
-                  <span className="field-label">
-                    Company membership
-                  </span>
-
-                  <strong>
-                    {selectedUser.membership_status}
-                  </strong>
-                </div>
-
-                <div>
-                  <span className="field-label">
-                    Platform level
-                  </span>
-
-                  <strong>
-                    {selectedUser.platform_level}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="company-user-detail-section">
-                <span className="eyebrow">
-                  ACCOUNT
-                </span>
-
-                <div className="company-detail-grid">
-                  <div>
-                    <span className="field-label">
-                      Username
-                    </span>
-
-                    <strong>
-                      {selectedUser.username}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span className="field-label">
-                      Display name
-                    </span>
-
-                    <strong>
-                      {selectedUser.display_name}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="company-user-detail-section">
-                <span className="eyebrow">
-                  ACCESS
-                </span>
-
-                <p className="muted">
-                  Role assignment and user
-                  lifecycle controls will be
-                  managed through the Company
-                  Roles and Users administration
-                  services.
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+        ))}
       </div>
-
-      {showAdd && (
-        <div
-          className="company-modal-backdrop"
-          onMouseDown={(event) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setShowAdd(false)
-            }
-          }}
-        >
-          <div className="company-modal">
-            <div className="company-modal-header">
-              <div>
-                <span className="eyebrow">
-                  COMPANY USERS
-                </span>
-
-                <h2>
-                  Add User
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                className="company-modal-close"
-                onClick={() =>
-                  setShowAdd(false)
-                }
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="company-modal-body">
-              <label>
-                Username
-
-                <input
-                  value={form.username}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      username:
-                        event.target.value,
-                    })
-                  }
-                  placeholder="username"
-                />
-              </label>
-
-              <label>
-                Display name
-
-                <input
-                  value={form.display_name}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      display_name:
-                        event.target.value,
-                    })
-                  }
-                  placeholder="Full name"
-                />
-              </label>
-
-              <label>
-                Temporary password
-
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      password:
-                        event.target.value,
-                    })
-                  }
-                  placeholder="Minimum 12 characters"
-                />
-              </label>
-            </div>
-
-            <div className="company-modal-footer">
-              <button
-                type="button"
-                className="company-secondary-action"
-                onClick={() =>
-                  setShowAdd(false)
-                }
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                className="company-primary-action"
-                onClick={add}
-              >
-                Create User
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
+
 function CompanyModules({
   context,
 }: {
@@ -3478,11 +2740,6 @@ createRoot(rootElement).render(
     <App />
   </StrictMode>,
 )
-
-
-
-
-
 
 
 

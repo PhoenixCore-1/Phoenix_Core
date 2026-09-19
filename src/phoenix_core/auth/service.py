@@ -1,4 +1,4 @@
-import hashlib
+﻿import hashlib
 import secrets
 from uuid import UUID
 
@@ -87,7 +87,49 @@ class AuthenticationService:
             raise AuthenticationError("Current password is incorrect.")
 
         self.db.execute(
-            "UPDATE users SET password_hash=? WHERE id=?",
+            "UPDATE users SET password_hash=?, password_reset_required=0 WHERE id=?",
             (hash_password(new_password), str(user_id)),
         )
         self.db.commit()
+
+    def admin_reset_password(self, user_id: UUID, new_password: str) -> None:
+        if not new_password or len(new_password) < 12:
+            raise ValidationError("Password must be at least 12 characters.")
+
+        row = self.db.execute(
+            "SELECT identity_id FROM users WHERE id=?",
+            (str(user_id),),
+        ).fetchone()
+        if not row:
+            raise AuthenticationError("User not found.")
+
+        self.db.execute(
+            "UPDATE users SET password_hash=?, password_reset_required=1 WHERE id=?",
+            (hash_password(new_password), str(user_id)),
+        )
+        self.db.execute(
+            "UPDATE sessions SET status='REVOKED' "
+            "WHERE identity_id=? AND status='ACTIVE'",
+            (row["identity_id"],),
+        )
+        self.db.commit()
+
+    def require_password_reset(self, user_id: UUID) -> None:
+        row = self.db.execute(
+            "SELECT identity_id FROM users WHERE id=?",
+            (str(user_id),),
+        ).fetchone()
+        if not row:
+            raise AuthenticationError("User not found.")
+
+        self.db.execute(
+            "UPDATE users SET password_reset_required=1 WHERE id=?",
+            (str(user_id),),
+        )
+        self.db.execute(
+            "UPDATE sessions SET status='REVOKED' "
+            "WHERE identity_id=? AND status='ACTIVE'",
+            (row["identity_id"],),
+        )
+        self.db.commit()
+

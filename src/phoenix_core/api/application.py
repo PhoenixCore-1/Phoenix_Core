@@ -731,29 +731,6 @@ class CoreApi:
             request_id=context.request_id,
         )
 
-    def legal_company_required_actions(
-        self,
-        context,
-    ) -> ApiResponse:
-        if context.organisation_id is None:
-            raise AuthorizationError(
-                "Company legal actions require an organisation context."
-            )
-
-        actions = self.legal_compliance_service.get_required_actions(
-            organisation_id=context.organisation_id,
-            identity_id=None,
-        )
-
-        company_actions = [
-            item for item in actions
-            if item.get("assignment_scope") == "COMPANY"
-        ]
-
-        return ApiResponse(
-            data={"items": company_actions},
-            request_id=context.request_id,
-        )
     def legal_complete_action(
         self,
         context,

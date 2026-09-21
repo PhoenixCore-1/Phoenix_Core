@@ -1,7 +1,8 @@
-﻿from uuid import UUID, uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Request
 
+from phoenix_company.application.legal import CompanyLegalApplicationService
 from phoenix_core.errors import AuthenticationError, AuthorizationError, ValidationError
 from phoenix_core.http_api.baseline import _session_context
 
@@ -48,7 +49,7 @@ def company_required_actions(request: Request):
             "Company legal compliance access required."
         )
 
-    return api.legal_company_required_actions(context).data
+    return CompanyLegalApplicationService(api).required_actions(context).data
 
 
 @router.post("/actions/{assignment_id}/complete")

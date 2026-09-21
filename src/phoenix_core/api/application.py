@@ -12,6 +12,7 @@ from phoenix_core.legal_compliance import LegalComplianceService
 from phoenix_core.ip import IPOwnershipService
 from phoenix_core.users.application import UserApplicationService
 from phoenix_core.identity.service import IdentityService
+from phoenix_core.organisations.service import OrganisationService
 
 
 class CoreApi:
@@ -27,6 +28,7 @@ class CoreApi:
         self.ip_ownership_service = IPOwnershipService(self.db)
         self.user_service = UserApplicationService(self)
         self.identity_service = IdentityService(db)
+        self.organisation_service = OrganisationService(db)
 
 
     # ------------------------------------------------------------------
@@ -566,7 +568,7 @@ class CoreApi:
 
     def get_current_organisation(self, *, request_id: str, session_id, organisation_id=None) -> ApiResponse:
         context = self.resolve_context(request_id=request_id, session_id=session_id, organisation_id=organisation_id)
-        organisation = self.core_service.get_organisation(context.organisation_id)
+        organisation = self.organisation_service.get_organisation(context.organisation_id)
         return ApiResponse(data={
             "id": str(organisation.id), "code": organisation.code, "name": organisation.name,
             "status": organisation.status, "created_at": organisation.created_at.isoformat(),

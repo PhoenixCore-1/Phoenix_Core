@@ -5,12 +5,17 @@ from uuid import UUID
 from fastapi import APIRouter, Request
 
 from phoenix_core.http_api.authorization import resolve_request_context
+from phoenix_company.application.users import CompanyUserApplicationService
 
 router = APIRouter(prefix="/api/v1/company", tags=["Company Platform"])
 
 
 def _service(request: Request):
     return request.app.state.core_api.core_service
+
+
+def _user_service(request: Request):
+    return CompanyUserApplicationService(request.app.state.core_api)
 
 
 def _organisation(context):
@@ -76,7 +81,12 @@ async def activity(request: Request):
 async def create_user(request: Request):
     context = await resolve_request_context(request)
     payload = await request.json()
-    result = request.app.state.core_api.company_create_user(context, username=str(payload.get("username", "")), display_name=str(payload.get("display_name", "")), password=str(payload.get("password", "")))
+    result = _user_service(request).create_user(
+        context,
+        username=str(payload.get("username", "")),
+        display_name=str(payload.get("display_name", "")),
+        password=str(payload.get("password", "")),
+    )
     return {"data": result.data, "request_id": result.request_id}
 
 
@@ -84,28 +94,33 @@ async def create_user(request: Request):
 async def update_user(request: Request, user_id: UUID):
     context = await resolve_request_context(request)
     payload = await request.json()
-    result = request.app.state.core_api.company_update_user(context, user_id, username=payload.get("username"), display_name=payload.get("display_name"))
+    result = _user_service(request).update_user(
+        context,
+        user_id,
+        username=payload.get("username"),
+        display_name=payload.get("display_name"),
+    )
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.post("/memberships/{membership_id}/suspend")
 async def suspend_membership(request: Request, membership_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_set_membership_status(context, membership_id, "SUSPENDED")
+    result = _user_service(request).set_membership_status(context, membership_id, "SUSPENDED")
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.post("/memberships/{membership_id}/restore")
 async def restore_membership(request: Request, membership_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_set_membership_status(context, membership_id, "ACTIVE")
+    result = _user_service(request).set_membership_status(context, membership_id, "ACTIVE")
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.post("/memberships/{membership_id}/remove")
 async def remove_membership(request: Request, membership_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_set_membership_status(context, membership_id, "REMOVED")
+    result = _user_service(request).set_membership_status(context, membership_id, "REMOVED")
     return {"data": result.data, "request_id": result.request_id}
 
 

@@ -554,7 +554,7 @@ class CoreApi:
         }, request_id=request_id)
 
     def revoke_session(self, *, request_id: str, token: str) -> ApiResponse:
-        revoked = self.core_service.revoke_session(token)
+        revoked = self.authentication_service.revoke_session(token)
         return ApiResponse(data={"revoked": revoked}, request_id=request_id)
 
     def get_current_identity(self, *, request_id: str, session_id, organisation_id=None) -> ApiResponse:

@@ -133,3 +133,15 @@ class AuthenticationService:
         )
         self.db.commit()
 
+    def revoke_session(self, token: str) -> bool:
+        if not token:
+            raise AuthenticationError("Authentication required.")
+
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        cur = self.db.execute(
+            "UPDATE sessions SET status='REVOKED' "
+            "WHERE token_hash=? AND status='ACTIVE'",
+            (token_hash,),
+        )
+        self.db.commit()
+        return cur.rowcount == 1

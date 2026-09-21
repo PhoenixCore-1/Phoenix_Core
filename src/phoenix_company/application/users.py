@@ -149,3 +149,121 @@ class CompanyUserApplicationService:
             },
             request_id=context.request_id,
         )
+
+    def list_users(self, context) -> ApiResponse:
+        self.core_api.require_permission(
+            context,
+            "company.memberships.manage",
+        )
+
+        memberships = self.core_service.list_memberships(
+            context.organisation_id
+        )
+
+        items = []
+        for membership in memberships:
+            user = self.core_service.get_user_by_identity(
+                membership.identity_id
+            )
+            items.append(
+                {
+                    "id": str(user.id),
+                    "identity_id": str(user.identity_id),
+                    "username": user.username,
+                    "display_name": user.display_name,
+                    "user_status": user.status,
+                    "membership_id": str(membership.id),
+                    "membership_status": membership.status,
+                    "created_at": user.created_at.isoformat(),
+                }
+            )
+
+        return ApiResponse(
+            data={"items": items},
+            request_id=context.request_id,
+        )
+
+    def list_memberships(self, context) -> ApiResponse:
+        self.core_api.require_permission(
+            context,
+            "company.memberships.manage",
+        )
+
+        items = self.core_service.list_memberships(
+            context.organisation_id
+        )
+
+        return ApiResponse(
+            data={
+                "items": [
+                    {
+                        "id": str(item.id),
+                        "identity_id": str(item.identity_id),
+                        "organisation_id": str(item.organisation_id),
+                        "status": item.status,
+                        "created_at": item.created_at.isoformat(),
+                    }
+                    for item in items
+                ]
+            },
+            request_id=context.request_id,
+        )
+
+    def list_users(self, context) -> ApiResponse:
+        self.core_api.require_permission(
+            context,
+            "company.memberships.manage",
+        )
+
+        memberships = self.core_service.list_memberships(
+            context.organisation_id
+        )
+
+        items = []
+        for membership in memberships:
+            user = self.core_service.get_user_by_identity(
+                membership.identity_id
+            )
+            items.append(
+                {
+                    "id": str(user.id),
+                    "identity_id": str(user.identity_id),
+                    "username": user.username,
+                    "display_name": user.display_name,
+                    "user_status": user.status,
+                    "membership_id": str(membership.id),
+                    "membership_status": membership.status,
+                    "created_at": user.created_at.isoformat(),
+                }
+            )
+
+        return ApiResponse(
+            data={"items": items},
+            request_id=context.request_id,
+        )
+
+    def list_memberships(self, context) -> ApiResponse:
+        self.core_api.require_permission(
+            context,
+            "company.memberships.manage",
+        )
+
+        items = self.core_service.list_memberships(
+            context.organisation_id
+        )
+
+        return ApiResponse(
+            data={
+                "items": [
+                    {
+                        "id": str(item.id),
+                        "identity_id": str(item.identity_id),
+                        "organisation_id": str(item.organisation_id),
+                        "status": item.status,
+                        "created_at": item.created_at.isoformat(),
+                    }
+                    for item in items
+                ]
+            },
+            request_id=context.request_id,
+        )

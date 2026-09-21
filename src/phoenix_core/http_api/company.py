@@ -7,18 +7,20 @@ from fastapi import APIRouter, Request
 from phoenix_core.http_api.authorization import resolve_request_context
 from phoenix_company.application.users import CompanyUserApplicationService
 from phoenix_company.application.activity import CompanyActivityApplicationService
+from phoenix_company.application.context import CompanyContextApplicationService
 from phoenix_company.application.roles import CompanyRoleApplicationService
 from phoenix_company.application.role_queries import CompanyRoleQueryService
 
 router = APIRouter(prefix="/api/v1/company", tags=["Company Platform"])
 
 
-def _service(request: Request):
-    return request.app.state.core_api.core_service
 
 
 def _user_service(request: Request):
     return CompanyUserApplicationService(request.app.state.core_api)
+
+def _context_service(request: Request):
+    return CompanyContextApplicationService(request.app.state.core_api)
 
 def _activity_service(request: Request):
     return CompanyActivityApplicationService(request.app.state.core_api)
@@ -45,30 +47,21 @@ def _membership_data(item):
 @router.get("")
 async def current_company(request: Request):
     context = await resolve_request_context(request)
-    organisation = _service(request).get_organisation(_organisation(context))
-    return {"data": {"id": str(organisation.id), "code": organisation.code, "name": organisation.name, "status": organisation.status, "created_at": organisation.created_at.isoformat()}, "request_id": context.request_id}
+    result = _context_service(request).get_current_company(context)
+    return {"data": result.data, "request_id": result.request_id}
 
 
 @router.get("/users")
 async def users(request: Request):
     context = await resolve_request_context(request)
-    request.app.state.core_api.require_permission(context, "company.memberships.manage")
-    service = _service(request)
-    memberships = service.list_memberships(_organisation(context))
-    items = []
-    for membership in memberships:
-        user = service.get_user_by_identity(membership.identity_id)
-        items.append({"id": str(user.id), "identity_id": str(user.identity_id), "username": user.username, "display_name": user.display_name, "user_status": user.status, "membership_id": str(membership.id), "membership_status": membership.status, "created_at": user.created_at.isoformat()})
-    return {"data": {"items": items}, "request_id": context.request_id}
-
+    result = _user_service(request).list_users(context)
+    return {"data": result.data, "request_id": result.request_id}
 
 @router.get("/memberships")
 async def memberships(request: Request):
     context = await resolve_request_context(request)
-    request.app.state.core_api.require_permission(context, "company.memberships.manage")
-    items = _service(request).list_memberships(_organisation(context))
-    return {"data": {"items": [_membership_data(item) for item in items]}, "request_id": context.request_id}
-
+    result = _user_service(request).list_memberships(context)
+    return {"data": result.data, "request_id": result.request_id}
 
 @router.get("/activity")
 async def activity(request: Request):

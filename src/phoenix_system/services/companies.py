@@ -135,10 +135,7 @@ async def create_system_company(request: Request):
             "Company code and name are required."
         )
 
-    company = api.core_service.create_organisation(
-        code,
-        name,
-    )
+    company = api.system_company_service.create_company(code, name)
 
     registration_fields = {
         "legal_name": str(
@@ -256,9 +253,7 @@ def suspend_system_company(
     if not company:
         raise ValidationError("Company not found.")
 
-    updated = api.core_service.suspend_organisation(
-        organisation_id
-    )
+    updated = api.system_company_service.suspend_company(organisation_id)
 
     return {
         "data": {
@@ -284,9 +279,7 @@ def activate_system_company(
     if not company:
         raise ValidationError("Company not found.")
 
-    updated = api.core_service.activate_organisation(
-        organisation_id
-    )
+    updated = api.system_company_service.activate_company(organisation_id)
 
     return {
         "data": {
@@ -427,11 +420,7 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
             "Username, display name and a password of at least 12 characters are required."
         )
 
-    created = api.core_service.create_user(
-        username,
-        display_name,
-        password,
-    )
+    created = api.user_service.create_user(username=username, display_name=display_name, password=password)
 
     api.db.execute(
         "UPDATE users SET platform_level='COMPANY_ADMIN' WHERE id=?",
@@ -439,10 +428,7 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
     )
     api.db.commit()
 
-    api.core_service.add_membership(
-        created.identity_id,
-        organisation_id,
-    )
+    api.company_membership_service.add_membership(created.identity_id, organisation_id)
 
     return {
         "data": {
@@ -453,3 +439,5 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
             "company_id": str(organisation_id),
         }
     }
+
+

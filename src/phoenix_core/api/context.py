@@ -11,9 +11,8 @@ from phoenix_core.sessions.service import SessionService
 class RequestContextResolver:
     """Resolve an authenticated API request into authoritative Core context."""
 
-    def __init__(self, db, core_service):
+    def __init__(self, db):
         self.db = db
-        self.core_service = core_service
         self.authorization_service = AuthorizationService(db)
         self.session_service = SessionService(db)
 
@@ -102,3 +101,4 @@ class RequestContextResolver:
             permissions=frozenset(permissions),
             entitlements=frozenset(entitlements),
         )
+

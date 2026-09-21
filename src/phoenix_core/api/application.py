@@ -13,24 +13,29 @@ from phoenix_core.legal_compliance import LegalComplianceService
 from phoenix_core.ip import IPOwnershipService
 from phoenix_core.users.application import UserApplicationService
 from phoenix_core.identity.service import IdentityService
+from phoenix_core.licensing.service import EntitlementService
+from phoenix_company.application.memberships import CompanyMembershipApplicationService
 from phoenix_core.organisations.service import OrganisationService
+from phoenix_system.application.companies import SystemCompanyApplicationService
 
 
 class CoreApi:
     """Authoritative application-facing API boundary for Phoenix Core."""
 
-    def __init__(self, db, core_service):
+    def __init__(self, db):
         self.db = db
-        self.core_service = core_service
         self.authentication_service = AuthenticationService(db)
         self.authorization_service = AuthorizationService(db)
         self.audit_service = AuditService(db)
-        self.context_resolver = RequestContextResolver(db, core_service)
+        self.entitlement_service = EntitlementService(db)
+        self.company_membership_service = CompanyMembershipApplicationService(self)
+        self.context_resolver = RequestContextResolver(db)
         self.legal_compliance_service = LegalComplianceService(db)
         self.ip_ownership_service = IPOwnershipService(self.db)
         self.user_service = UserApplicationService(self)
         self.identity_service = IdentityService(db)
         self.organisation_service = OrganisationService(db)
+        self.system_company_service = SystemCompanyApplicationService(self)
 
 
     # ------------------------------------------------------------------
@@ -772,6 +777,10 @@ class CoreApi:
         )
 
         return ApiResponse(data=assignment, request_id=context.request_id)
+
+
+
+
 
 
 

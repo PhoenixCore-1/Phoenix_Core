@@ -35,7 +35,6 @@ from phoenix_core.http_api.visibility import router as visibility_router
 from phoenix_core.http_api.workspaces import router as workspace_router
 from phoenix_core.infrastructure import SQLiteDatabase
 from phoenix_core.migration_runner import apply_all as apply_all_migrations
-from phoenix_core.services import CoreFoundationService
 
 
 SESSION_COOKIE = "phoenix_session"
@@ -196,6 +195,7 @@ def _error_response(
 
 def create_development_app(
     database_path: str = ".local/phoenix_core_v1_dev.db",
+    db=None,
 ) -> FastAPI:
     """Create the Phoenix Core V1 development application."""
 
@@ -204,19 +204,14 @@ def create_development_app(
         version="1.0.0",
     )
 
-    db = SQLiteDatabase(database_path)
+    if db is None:
+        db = SQLiteDatabase(database_path)
 
     apply_all_migrations(db)
 
-    core_service = CoreFoundationService(db)
-
-    core_api = CoreApi(
-        db=db,
-        core_service=core_service,
-    )
+    core_api = CoreApi(db)
 
     app.state.db = db
-    app.state.core_service = core_service
     app.state.core_api = core_api
 
     @app.middleware("http")
@@ -306,7 +301,7 @@ def create_development_app(
             value=token,
             httponly=True,
             samesite="lax",
-            secure=False,
+            secure=True,
             path="/",
         )
 
@@ -496,6 +491,11 @@ def create_development_app(
     app.include_router(workspace_router)
 
     return app
+
+
+
+
+
 
 
 

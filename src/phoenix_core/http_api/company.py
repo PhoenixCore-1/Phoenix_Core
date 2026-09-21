@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 
 from phoenix_core.http_api.authorization import resolve_request_context
 from phoenix_company.application.users import CompanyUserApplicationService
+from phoenix_company.application.roles import CompanyRoleApplicationService
 
 router = APIRouter(prefix="/api/v1/company", tags=["Company Platform"])
 
@@ -16,6 +17,9 @@ def _service(request: Request):
 
 def _user_service(request: Request):
     return CompanyUserApplicationService(request.app.state.core_api)
+
+def _role_service(request: Request):
+    return CompanyRoleApplicationService(request.app.state.core_api)
 
 
 def _organisation(context):
@@ -136,7 +140,11 @@ async def roles(request: Request):
 async def create_role(request: Request):
     context = await resolve_request_context(request)
     payload = await request.json()
-    result = request.app.state.core_api.company_create_role(context, code=str(payload.get("code", "")), name=str(payload.get("name", "")))
+    result = _role_service(request).create_role(
+        context,
+        code=str(payload.get("code", "")),
+        name=str(payload.get("name", "")),
+    )
     return {"data": result.data, "request_id": result.request_id}
 
 
@@ -144,21 +152,26 @@ async def create_role(request: Request):
 async def update_role(request: Request, role_id: UUID):
     context = await resolve_request_context(request)
     payload = await request.json()
-    result = request.app.state.core_api.company_update_role(context, role_id, code=payload.get("code"), name=payload.get("name"))
+    result = _role_service(request).update_role(
+        context,
+        role_id,
+        code=payload.get("code"),
+        name=payload.get("name"),
+    )
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.post("/roles/{role_id}/disable")
 async def disable_role(request: Request, role_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_set_role_status(context, role_id, "DISABLED")
+    result = _role_service(request).set_role_status(context, role_id, "DISABLED")
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.post("/roles/{role_id}/enable")
 async def enable_role(request: Request, role_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_set_role_status(context, role_id, "ACTIVE")
+    result = _role_service(request).set_role_status(context, role_id, "ACTIVE")
     return {"data": result.data, "request_id": result.request_id}
 
 
@@ -177,28 +190,28 @@ async def role_permissions(request: Request, role_id: UUID):
 @router.post("/roles/{role_id}/permissions/{permission_id}")
 async def grant_role_permission(request: Request, role_id: UUID, permission_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_grant_permission(context, role_id, permission_id)
+    result = _role_service(request).grant_permission(context, role_id, permission_id)
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.delete("/roles/{role_id}/permissions/{permission_id}")
 async def revoke_role_permission(request: Request, role_id: UUID, permission_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_revoke_permission(context, role_id, permission_id)
+    result = _role_service(request).revoke_permission(context, role_id, permission_id)
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.post("/memberships/{membership_id}/roles/{role_id}")
 async def assign_role(request: Request, membership_id: UUID, role_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_assign_role(context, membership_id, role_id)
+    result = _role_service(request).assign_role(context, membership_id, role_id)
     return {"data": result.data, "request_id": result.request_id}
 
 
 @router.delete("/memberships/{membership_id}/roles/{role_id}")
 async def remove_role(request: Request, membership_id: UUID, role_id: UUID):
     context = await resolve_request_context(request)
-    result = request.app.state.core_api.company_remove_role(context, membership_id, role_id)
+    result = _role_service(request).remove_role(context, membership_id, role_id)
     return {"data": result.data, "request_id": result.request_id}
 
 

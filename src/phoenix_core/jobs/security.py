@@ -4,6 +4,8 @@ from uuid import UUID
 
 from phoenix_core.authorization.service import AuthorizationService
 from phoenix_core.identity.service import IdentityService
+from phoenix_core.modules.service import ModuleService
+from phoenix_core.licensing.service import EntitlementService
 from phoenix_core.organisations.service import OrganisationService
 from phoenix_core.errors import AuthenticationError, AuthorizationError
 from phoenix_core.jobs.domain import Job
@@ -19,6 +21,8 @@ class JobSecurityService:
         self.authorization_service = AuthorizationService(db)
         self.identity_service = IdentityService(db)
         self.organisation_service = OrganisationService(db)
+        self.module_service = ModuleService(db)
+        self.entitlement_service = EntitlementService(db)
 
     def validate_execution(
         self,
@@ -102,11 +106,11 @@ class JobSecurityService:
                 )
 
         if required_entitlement is not None:
-            module = self.core_service.get_module_by_code(
+            module = self.module_service.get_by_code(
                 required_entitlement
             )
 
-            if not self.core_service.module_available(
+            if not self.entitlement_service.is_module_available(
                 organisation_id,
                 module.id,
             ):

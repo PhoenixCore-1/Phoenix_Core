@@ -9,6 +9,7 @@ from phoenix_core.auth.service import AuthenticationService
 from phoenix_core.errors import AuthorizationError
 from phoenix_core.legal_compliance import LegalComplianceService
 from phoenix_core.ip import IPOwnershipService
+from phoenix_core.users.application import UserApplicationService
 
 
 class CoreApi:
@@ -21,6 +22,7 @@ class CoreApi:
         self.context_resolver = RequestContextResolver(db, core_service)
         self.legal_compliance_service = LegalComplianceService(db)
         self.ip_ownership_service = IPOwnershipService(self.db)
+        self.user_service = UserApplicationService(self)
 
 
     # ------------------------------------------------------------------
@@ -762,4 +764,5 @@ class CoreApi:
         )
 
         return ApiResponse(data=assignment, request_id=context.request_id)
+
 

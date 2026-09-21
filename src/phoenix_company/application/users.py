@@ -2,6 +2,7 @@ from uuid import UUID
 
 from phoenix_core.api.contracts import ApiResponse
 from phoenix_core.errors import AuthorizationError
+from phoenix_company.application.memberships import CompanyMembershipApplicationService
 
 
 class CompanyUserApplicationService:
@@ -9,7 +10,8 @@ class CompanyUserApplicationService:
 
     def __init__(self, core_api):
         self.core_api = core_api
-        self.core_service = core_api.core_service
+        self.user_service = core_api.user_service
+        self.membership_service = CompanyMembershipApplicationService(core_api)
 
     def create_user(
         self,
@@ -21,12 +23,12 @@ class CompanyUserApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.users.manage")
 
-        user = self.core_service.create_user(
+        user = self.user_service.create_user(
             username,
             display_name,
             password,
         )
-        membership = self.core_service.add_membership(
+        membership = self.membership_service.add_membership(
             user.identity_id,
             context.organisation_id,
         )
@@ -71,8 +73,8 @@ class CompanyUserApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.users.manage")
 
-        user = self.core_service.get_user(user_id)
-        memberships = self.core_service.list_memberships(
+        user = self.user_service.get_user(user_id)
+        memberships = self.membership_service.list_memberships(
             context.organisation_id
         )
 
@@ -85,7 +87,7 @@ class CompanyUserApplicationService:
                 "User does not belong to the current organisation."
             )
 
-        updated = self.core_service.update_user(
+        updated = self.user_service.update_user(
             user_id,
             username=username,
             display_name=display_name,
@@ -120,14 +122,14 @@ class CompanyUserApplicationService:
             "company.memberships.manage",
         )
 
-        membership = self.core_service.get_membership(membership_id)
+        membership = self.membership_service.get_membership(membership_id)
 
         if membership.organisation_id != context.organisation_id:
             raise AuthorizationError(
                 "Membership does not belong to the current organisation."
             )
 
-        updated = self.core_service.set_membership_status(
+        updated = self.membership_service.set_membership_status(
             membership_id,
             status,
         )
@@ -156,13 +158,13 @@ class CompanyUserApplicationService:
             "company.memberships.manage",
         )
 
-        memberships = self.core_service.list_memberships(
+        memberships = self.membership_service.list_memberships(
             context.organisation_id
         )
 
         items = []
         for membership in memberships:
-            user = self.core_service.get_user_by_identity(
+            user = self.user_service.get_user_by_identity(
                 membership.identity_id
             )
             items.append(
@@ -189,7 +191,7 @@ class CompanyUserApplicationService:
             "company.memberships.manage",
         )
 
-        items = self.core_service.list_memberships(
+        items = self.membership_service.list_memberships(
             context.organisation_id
         )
 
@@ -215,13 +217,13 @@ class CompanyUserApplicationService:
             "company.memberships.manage",
         )
 
-        memberships = self.core_service.list_memberships(
+        memberships = self.membership_service.list_memberships(
             context.organisation_id
         )
 
         items = []
         for membership in memberships:
-            user = self.core_service.get_user_by_identity(
+            user = self.user_service.get_user_by_identity(
                 membership.identity_id
             )
             items.append(
@@ -248,7 +250,7 @@ class CompanyUserApplicationService:
             "company.memberships.manage",
         )
 
-        items = self.core_service.list_memberships(
+        items = self.membership_service.list_memberships(
             context.organisation_id
         )
 
@@ -267,3 +269,8 @@ class CompanyUserApplicationService:
             },
             request_id=context.request_id,
         )
+
+
+
+
+

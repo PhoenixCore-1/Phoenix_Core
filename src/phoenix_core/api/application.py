@@ -11,6 +11,7 @@ from phoenix_core.errors import AuthorizationError
 from phoenix_core.legal_compliance import LegalComplianceService
 from phoenix_core.ip import IPOwnershipService
 from phoenix_core.users.application import UserApplicationService
+from phoenix_core.identity.service import IdentityService
 
 
 class CoreApi:
@@ -25,6 +26,7 @@ class CoreApi:
         self.legal_compliance_service = LegalComplianceService(db)
         self.ip_ownership_service = IPOwnershipService(self.db)
         self.user_service = UserApplicationService(self)
+        self.identity_service = IdentityService(db)
 
 
     # ------------------------------------------------------------------
@@ -559,7 +561,7 @@ class CoreApi:
 
     def get_current_identity(self, *, request_id: str, session_id, organisation_id=None) -> ApiResponse:
         context = self.resolve_context(request_id=request_id, session_id=session_id, organisation_id=organisation_id)
-        identity = self.core_service.get_identity(context.identity_id)
+        identity = self.identity_service.get_identity(context.identity_id)
         return ApiResponse(data={"id": str(identity.id), "type": identity.identity_type, "status": identity.status}, request_id=context.request_id)
 
     def get_current_organisation(self, *, request_id: str, session_id, organisation_id=None) -> ApiResponse:

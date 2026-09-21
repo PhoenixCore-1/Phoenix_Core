@@ -94,16 +94,6 @@ class CoreFoundationService:
             raise
         return org
 
-    def get_identity(self, identity_id: UUID) -> Identity:
-        row = self.db.execute(
-            "SELECT id,identity_type,status,created_at FROM identities WHERE id=?",
-            (str(identity_id),),
-        ).fetchone()
-        if not row:
-            raise NotFoundError("Identity not found.")
-        from datetime import datetime
-        return Identity(UUID(row["id"]), row["identity_type"], row["status"], datetime.fromisoformat(row["created_at"]))
-
     def get_organisation(self, organisation_id: UUID) -> Organisation:
         row = self.db.execute(
             "SELECT id,code,name,status,created_at FROM organisations WHERE id=?",

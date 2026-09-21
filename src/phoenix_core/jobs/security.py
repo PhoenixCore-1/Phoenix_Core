@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from phoenix_core.authorization.service import AuthorizationService
+from phoenix_core.identity.service import IdentityService
 from phoenix_core.errors import AuthenticationError, AuthorizationError
 from phoenix_core.jobs.domain import Job
 from phoenix_core.security.context import RequestContext
@@ -15,6 +16,7 @@ class JobSecurityService:
         self.db = db
         self.core_service = core_service
         self.authorization_service = AuthorizationService(db)
+        self.identity_service = IdentityService(db)
 
     def validate_execution(
         self,
@@ -49,7 +51,7 @@ class JobSecurityService:
                 "Job organisation is not active."
             )
 
-        identity = self.core_service.get_identity(identity_id)
+        identity = self.identity_service.get_identity(identity_id)
 
         if identity.status != "ACTIVE":
             raise AuthorizationError(

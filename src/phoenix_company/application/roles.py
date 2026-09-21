@@ -9,12 +9,12 @@ class CompanyRoleApplicationService:
 
     def __init__(self, core_api):
         self.core_api = core_api
-        self.core_service = core_api.core_service
+        self.role_service = core_api.role_service
 
     def create_role(self, context, *, code: str, name: str) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        role = self.core_service.create_role(
+        role = self.role_service.create_role(
             context.organisation_id,
             code,
             name,
@@ -49,14 +49,14 @@ class CompanyRoleApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        role = self.core_service.get_role(role_id)
+        role = self.role_service.get_role(role_id)
 
         if role.organisation_id != context.organisation_id:
             raise AuthorizationError(
                 "Role does not belong to the current organisation."
             )
 
-        updated = self.core_service.update_role(
+        updated = self.role_service.update_role(
             role_id,
             code=code,
             name=name,
@@ -89,14 +89,14 @@ class CompanyRoleApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        role = self.core_service.get_role(role_id)
+        role = self.role_service.get_role(role_id)
 
         if role.organisation_id != context.organisation_id:
             raise AuthorizationError(
                 "Role does not belong to the current organisation."
             )
 
-        updated = self.core_service.set_role_status(
+        updated = self.role_service.set_role_status(
             role_id,
             status,
         )
@@ -128,8 +128,8 @@ class CompanyRoleApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        membership = self.core_service.get_membership(membership_id)
-        role = self.core_service.get_role(role_id)
+        membership = self.role_service.get_membership(membership_id)
+        role = self.role_service.get_role(role_id)
 
         if (
             membership.organisation_id != context.organisation_id
@@ -139,7 +139,7 @@ class CompanyRoleApplicationService:
                 "Role and membership must belong to the current organisation."
             )
 
-        assignment_id = self.core_service.assign_role(
+        assignment_id = self.role_service.assign_role(
             membership_id,
             role_id,
         )
@@ -168,8 +168,8 @@ class CompanyRoleApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        membership = self.core_service.get_membership(membership_id)
-        role = self.core_service.get_role(role_id)
+        membership = self.role_service.get_membership(membership_id)
+        role = self.role_service.get_role(role_id)
 
         if (
             membership.organisation_id != context.organisation_id
@@ -179,7 +179,7 @@ class CompanyRoleApplicationService:
                 "Role and membership must belong to the current organisation."
             )
 
-        removed = self.core_service.remove_role(
+        removed = self.role_service.remove_role(
             membership_id,
             role_id,
         )
@@ -209,14 +209,14 @@ class CompanyRoleApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        role = self.core_service.get_role(role_id)
+        role = self.role_service.get_role(role_id)
 
         if role.organisation_id != context.organisation_id:
             raise AuthorizationError(
                 "Role does not belong to the current organisation."
             )
 
-        self.core_service.grant_permission(
+        self.role_service.grant_permission(
             role_id,
             permission_id,
         )
@@ -245,14 +245,14 @@ class CompanyRoleApplicationService:
     ) -> ApiResponse:
         self.core_api.require_permission(context, "company.roles.manage")
 
-        role = self.core_service.get_role(role_id)
+        role = self.role_service.get_role(role_id)
 
         if role.organisation_id != context.organisation_id:
             raise AuthorizationError(
                 "Role does not belong to the current organisation."
             )
 
-        removed = self.core_service.revoke_permission(
+        removed = self.role_service.revoke_permission(
             role_id,
             permission_id,
         )
@@ -273,3 +273,4 @@ class CompanyRoleApplicationService:
             },
             request_id=context.request_id,
         )
+

@@ -3,11 +3,11 @@
 from fastapi.testclient import TestClient
 from uuid import uuid4
 
-from phoenix_core.api.application import CoreApi
-from phoenix_core.http_api.app import ORGANISATION_HEADER, create_app
-from phoenix_core.infrastructure import SQLiteDatabase
-from phoenix_core.services import CoreFoundationService
-
+from phoenix_core.http_api.app import ORGANISATION_HEADER, create_development_app
+from phoenix_core.users.application import UserApplicationService
+from phoenix_system.application.companies import SystemCompanyApplicationService
+from phoenix_company.application.memberships import CompanyMembershipApplicationService
+from phoenix_company.application.roles import CompanyRoleApplicationService
 
 MANAGEMENT_PERMISSIONS = (
     "company.users.manage",
@@ -17,22 +17,44 @@ MANAGEMENT_PERMISSIONS = (
 
 
 def build_client(tmp_path, *, admin=True):
-    db = SQLiteDatabase(tmp_path / "core.db")
-    core = CoreFoundationService(db)
-    core.initialise()
-    organisation = core.create_organisation("TEST", "Test Company")
-    user = core.create_user("test.user", "Test User", "test-password")
-    membership = core.add_membership(user.identity_id, organisation.id)
+    database_path = str(tmp_path / "core.db")
+    app = create_development_app(database_path)
+
+    core = app.state.core_api
+    db = app.state.db
+
+    system_company = SystemCompanyApplicationService(core)
+    user_service = UserApplicationService(core)
+    membership_service = CompanyMembershipApplicationService(core)
+
+    organisation = system_company.create_company("TEST", "Test Company")
+    user = user_service.create_user(
+        username="test.user",
+        display_name="Test User",
+        password="test-password",
+    )
+    membership = membership_service.add_membership(
+        user.identity_id,
+        organisation.id,
+    )
 
     if admin:
-        role = core.create_role(organisation.id, "company_admin", "Company Administrator")
+        role_service = core.role_service
+        role = role_service.create_role(
+            organisation.id,
+            "company_admin",
+            "Company Administrator",
+        )
+
+        authorization = core.role_service
+
         for code in MANAGEMENT_PERMISSIONS:
-            permission = core.create_permission(code, code.replace(".", " ").title())
-            core.grant_permission(role.id, permission.id)
-        core.assign_role(membership.id, role.id)
+            permission = role_service.get_permission_by_code(code)
+            role_service.grant_permission(role.id, permission.id)
 
-    return TestClient(create_app(CoreApi(db, core)), base_url="https://testserver"), organisation, core
+        role_service.assign_role(membership.id, role.id)
 
+    return TestClient(app, base_url="https://testserver"), organisation, core
 
 def login(client, organisation):
     response = client.post(
@@ -99,7 +121,7 @@ def test_company_admin_can_create_user_and_core_records_audit(tmp_path):
     assert data["user"]["username"] == "new.user"
     assert data["membership"]["status"] == "ACTIVE"
 
-    memberships = core.list_memberships(organisation.id)
+    memberships = core.company_membership_service.list_memberships(organisation.id)
     assert len(memberships) == 2
     audits = core.audit_service.list(organisation_id=organisation.id)
     actions = {event.action for event in audits}
@@ -129,8 +151,8 @@ def test_membership_mutations_are_tenant_scoped_and_audited(tmp_path):
     client, organisation, core = build_client(tmp_path, admin=True)
     headers = login(client, organisation)
 
-    user = core.create_user("member.user", "Member User", "member-password")
-    membership = core.add_membership(user.identity_id, organisation.id)
+    user = core.user_service.create_user(username="member.user", display_name="Member User", password="member-password")
+    membership = core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     response = client.post(
         f"/api/v1/company/memberships/{membership.id}/suspend",
@@ -163,7 +185,7 @@ def test_role_management_and_permission_assignment_are_audited(tmp_path):
     assert response.status_code == 200
     role_id = response.json()["data"]["id"]
 
-    permission = core.create_permission("sales.quote.view", "View Sales Quotes")
+    permission = core.role_service.create_permission("sales.quote.view", "View Sales Quotes")
     response = client.post(
         f"/api/v1/company/roles/{role_id}/permissions/{permission.id}",
         headers=headers,
@@ -188,8 +210,8 @@ def test_company_cannot_mutate_role_from_another_organisation(tmp_path):
     client, organisation, core = build_client(tmp_path, admin=True)
     headers = login(client, organisation)
 
-    other = core.create_organisation("OTHER", "Other Company")
-    foreign_role = core.create_role(other.id, "foreign", "Foreign Role")
+    other = SystemCompanyApplicationService(core).create_company("OTHER", "Other Company")
+    foreign_role = core.role_service.create_role(other.id, "foreign", "Foreign Role")
 
     response = client.post(
         f"/api/v1/company/roles/{foreign_role.id}/disable",
@@ -198,3 +220,13 @@ def test_company_cannot_mutate_role_from_another_organisation(tmp_path):
 
     assert response.status_code == 403
     assert response.json()["code"] == "AUTHORIZATION_ERROR"
+
+
+
+
+
+
+
+
+
+

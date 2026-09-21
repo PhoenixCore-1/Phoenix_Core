@@ -17,6 +17,7 @@ from phoenix_core.licensing.service import EntitlementService
 from phoenix_company.application.memberships import CompanyMembershipApplicationService
 from phoenix_core.organisations.service import OrganisationService
 from phoenix_system.application.companies import SystemCompanyApplicationService
+from phoenix_core.roles.service import RoleService
 
 
 class CoreApi:
@@ -26,6 +27,7 @@ class CoreApi:
         self.db = db
         self.authentication_service = AuthenticationService(db)
         self.authorization_service = AuthorizationService(db)
+        self.role_service = RoleService(db)
         self.audit_service = AuditService(db)
         self.entitlement_service = EntitlementService(db)
         self.company_membership_service = CompanyMembershipApplicationService(self)
@@ -777,6 +779,7 @@ class CoreApi:
         )
 
         return ApiResponse(data=assignment, request_id=context.request_id)
+
 
 
 

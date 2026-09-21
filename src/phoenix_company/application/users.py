@@ -24,9 +24,9 @@ class CompanyUserApplicationService:
         self.core_api.require_permission(context, "company.users.manage")
 
         user = self.user_service.create_user(
-            username,
-            display_name,
-            password,
+            username=username,
+            display_name=display_name,
+            password=password,
         )
         membership = self.membership_service.add_membership(
             user.identity_id,
@@ -269,6 +269,7 @@ class CompanyUserApplicationService:
             },
             request_id=context.request_id,
         )
+
 
 
 

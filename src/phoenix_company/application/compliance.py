@@ -81,6 +81,7 @@ class CompanyComplianceApplicationService:
 
         required = [item for item in items if item["acceptance_required"]]
         accepted = [item for item in required if item["current_identity_accepted"]]
+
         return ApiResponse(
             data={
                 "organisation_id": str(context.organisation_id),
@@ -90,7 +91,9 @@ class CompanyComplianceApplicationService:
                     "active_requirements": len(required),
                     "current_identity_accepted": len(accepted),
                     "action_required": len(required) - len(accepted),
-                    "status": "COMPLIANT" if len(required) == len(accepted) else "ACTION_REQUIRED",
+                    "status": "COMPLIANT"
+                    if len(required) == len(accepted)
+                    else "ACTION_REQUIRED",
                 },
                 "items": items,
                 "capabilities": {

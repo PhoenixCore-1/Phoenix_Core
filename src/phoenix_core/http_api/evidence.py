@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from phoenix_core.company.evidence import CompanyEvidenceApplicationService
+from phoenix_company.application.evidence import CompanyEvidenceApplicationService
 from phoenix_core.http_api.authorization import resolve_request_context
 
 router = APIRouter(prefix="/api/v1/company/evidence", tags=["Company Platform"])

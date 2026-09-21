@@ -38,9 +38,19 @@ class CompanyEvidenceApplicationService:
             request_id=context.request_id,
         )
 
-    def create_evidence(self, context, *, title, evidence_type, description=None,
-                        policy_version_id=None, document_id=None,
-                        document_version_id=None, valid_from=None, valid_until=None) -> ApiResponse:
+    def create_evidence(
+        self,
+        context,
+        *,
+        title,
+        evidence_type,
+        description=None,
+        policy_version_id=None,
+        document_id=None,
+        document_version_id=None,
+        valid_from=None,
+        valid_until=None,
+    ) -> ApiResponse:
         self.core_api.require_permission(context, "company.configuration.manage")
         evidence_id = uuid4()
         now = datetime.now(timezone.utc).isoformat()
@@ -52,10 +62,21 @@ class CompanyEvidenceApplicationService:
              created_by_identity_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?)
             """,
-            (str(evidence_id), str(context.organisation_id), policy_version_id,
-             document_id, document_version_id, evidence_type.strip().upper(),
-             title.strip(), description, valid_from, valid_until,
-             str(context.identity_id), now, now),
+            (
+                str(evidence_id),
+                str(context.organisation_id),
+                policy_version_id,
+                document_id,
+                document_version_id,
+                evidence_type.strip().upper(),
+                title.strip(),
+                description,
+                valid_from,
+                valid_until,
+                str(context.identity_id),
+                now,
+                now,
+            ),
         )
         self.core.db.commit()
         self.core.audit_service.record(

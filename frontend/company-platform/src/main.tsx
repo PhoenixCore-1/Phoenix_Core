@@ -1,4 +1,4 @@
-﻿import { StrictMode, useEffect, useState } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 
@@ -325,7 +325,7 @@ function Login({
             Phoenix Core Platform V1.0.0
           </span>
 
-          <b>•</b>
+          <b>�</b>
 
           <span>
             Secure access
@@ -1075,7 +1075,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                ×
+                �
               </button>
             </div>
 
@@ -1198,7 +1198,7 @@ function KpiCard({
 
       {!disabled && (
         <span className="kpi-drill">
-          View details →
+          View details ?
         </span>
       )}
     </button>
@@ -1340,7 +1340,7 @@ function SystemHome({
         <KpiCard
           value={
             loading
-              ? '—'
+              ? '�'
               : totalCompanies
           }
           label="Total Companies"
@@ -1358,7 +1358,7 @@ function SystemHome({
         <KpiCard
           value={
             loading
-              ? '—'
+              ? '�'
               : activeCompanies
           }
           label="Active Companies"
@@ -1374,7 +1374,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="�"
           label="System Users"
           secondary="Data will be connected"
           onClick={() =>
@@ -1387,7 +1387,7 @@ function SystemHome({
         <KpiCard
           value={
             loading
-              ? '—'
+              ? '�'
               : activeBusinessModules
           }
           label="Active Business Modules"
@@ -1405,7 +1405,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="�"
           label="Companies on Trial"
           secondary="Trial data will be connected"
           onClick={() =>
@@ -1416,7 +1416,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="�"
           label="Active Licences"
           secondary="Licence data will be connected"
           onClick={() =>
@@ -1427,7 +1427,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="�"
           label="Pending Quotes"
           secondary="Quote data will be connected"
           onClick={() =>
@@ -1436,7 +1436,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="�"
           label="Notifications"
           secondary="Notification data will be connected"
           onClick={() =>
@@ -1482,7 +1482,7 @@ function SystemHome({
 
             <strong>
               {loading
-                ? '—'
+                ? '�'
                 : `${activeBusinessModules} active`}
             </strong>
           </div>
@@ -1519,7 +1519,7 @@ function SystemHome({
                 )
               }
             >
-              View all →
+              View all ?
             </button>
           </div>
 
@@ -1768,7 +1768,7 @@ function SystemCompanies() {
               setMessage('')
             }}
           >
-            ← Back to Companies
+            ? Back to Companies
           </button>
 
           <span className="eyebrow">
@@ -2071,15 +2071,15 @@ function CompanyShell({
     label: string
     icon: string
   }[] = [
-    { view: 'company', label: 'Company Profile', icon: '▣' },
-    { view: 'users', label: 'Users', icon: '♙' },
-    { view: 'roles', label: 'Roles', icon: '◆' },
-    { view: 'workspace', label: 'Workspace', icon: '⌘' },
-    { view: 'kpi', label: 'KPI', icon: '◈' },
-    { view: 'reporting', label: 'Reporting', icon: '▥' },
-    { view: 'activity', label: 'Activity', icon: '◷' },
-    { view: 'settings', label: 'Company Settings', icon: '⚙' },
-    { view: 'connect', label: 'Phoenix Connect', icon: '↔' },
+    { view: 'company', label: 'Company Profile', icon: '?' },
+    { view: 'users', label: 'Users', icon: '?' },
+    { view: 'roles', label: 'Roles', icon: '?' },
+    { view: 'workspace', label: 'Workspace', icon: '?' },
+    { view: 'kpi', label: 'KPI', icon: '?' },
+    { view: 'reporting', label: 'Reporting', icon: '?' },
+    { view: 'activity', label: 'Activity', icon: '?' },
+    { view: 'settings', label: 'Company Settings', icon: '?' },
+    { view: 'connect', label: 'Phoenix Connect', icon: '?' },
   ]
 
   const placeholderTitles: Record<
@@ -2169,7 +2169,7 @@ function CompanyShell({
               setView('home')
             }
           >
-            <span className="company-nav-icon">⌂</span>
+            <span className="company-nav-icon">�</span>
             Home
           </button>
 
@@ -2219,7 +2219,7 @@ function CompanyShell({
                 className="company-search-icon"
                 aria-hidden="true"
               >
-                ⌕
+                ?
               </span>
 
               <input
@@ -2240,7 +2240,7 @@ function CompanyShell({
                 setNotificationsOpen(false)
               }}
             >
-              <span>✦</span>
+              <span>?</span>
               AI
             </button>
 
@@ -2296,13 +2296,13 @@ function CompanyShell({
                         setNotificationsOpen(false)
                       }
                     >
-                      ×
+                      �
                     </button>
                   </div>
 
                   <div className="company-notification-empty">
                     <div className="company-notification-empty-icon">
-                      ♧
+                      ?
                     </div>
 
                     <strong>
@@ -2347,7 +2347,7 @@ function CompanyShell({
                 </span>
 
                 <span className="company-profile-chevron">
-                  {profileOpen ? '⌃' : '⌄'}
+                  {profileOpen ? '^' : '?'}
                 </span>
               </button>
 
@@ -2383,7 +2383,7 @@ function CompanyShell({
                       setProfileOpen(false)
                     }}
                   >
-                    <span>♙</span>
+                    <span>?</span>
                     Profile
                   </button>
 
@@ -2395,7 +2395,7 @@ function CompanyShell({
                       setView('settings')
                     }}
                   >
-                    <span>⚙</span>
+                    <span>?</span>
                     Settings
                   </button>
 
@@ -2406,7 +2406,7 @@ function CompanyShell({
                     className="company-profile-menu-item signout"
                     onClick={onLogout}
                   >
-                    <span>↪</span>
+                    <span>?</span>
                     Sign out
                   </button>
                 </div>
@@ -2489,7 +2489,7 @@ function CompanyHome({
           </div>
 
           <div className="company-kpi-empty">
-            <div className="company-kpi-symbol">◈</div>
+            <div className="company-kpi-symbol">?</div>
 
             <strong>Role-based KPIs</strong>
 
@@ -2569,7 +2569,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} · v{module.version}
+                      {module.code} � v{module.version}
                     </span>
                   </div>
 
@@ -2623,7 +2623,7 @@ function CompanyHome({
       </div>
 
       <div className="company-readonly-notice">
-        <span>ⓘ</span>
+        <span>?</span>
 
         <div>
           <strong>
@@ -2696,7 +2696,7 @@ function CompanyUsers() {
     try {
       const data =
         await api(
-          '/api/v1/baseline/company/users',
+          '/api/v1/company/users',
         )
 
       const items = data.items || []
@@ -2737,7 +2737,7 @@ function CompanyUsers() {
 
     try {
       await api(
-        '/api/v1/baseline/company/users',
+        '/api/v1/company/users',
         {
           method: 'POST',
           body: JSON.stringify(form),
@@ -2842,7 +2842,7 @@ function CompanyUsers() {
           </div>
 
           <div className="company-user-search">
-            <span>⌕</span>
+            <span>?</span>
 
             <input
               type="search"
@@ -3076,7 +3076,7 @@ function CompanyUsers() {
                   setShowAdd(false)
                 }
               >
-                ×
+                �
               </button>
             </div>
 
@@ -3405,7 +3405,7 @@ function UserModules({
                 </h3>
 
                 <p>
-                  Launch workspace →
+                  Launch workspace ?
                 </p>
               </button>
             ),
@@ -3478,6 +3478,7 @@ createRoot(rootElement).render(
     <App />
   </StrictMode>,
 )
+
 
 
 

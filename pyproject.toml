@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phoenix-core-v1"
-version = "1.0.0"
+version = "1.0.4"
 description = "Phoenix Core V1.0.0 SaaS platform baseline"
 requires-python = ">=3.11"
 dependencies = [

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 
 from phoenix_core.http_api.authorization import resolve_request_context
 from phoenix_company.application.users import CompanyUserApplicationService
+from phoenix_company.application.activity import CompanyActivityApplicationService
 from phoenix_company.application.roles import CompanyRoleApplicationService
 from phoenix_company.application.role_queries import CompanyRoleQueryService
 
@@ -18,6 +19,9 @@ def _service(request: Request):
 
 def _user_service(request: Request):
     return CompanyUserApplicationService(request.app.state.core_api)
+
+def _activity_service(request: Request):
+    return CompanyActivityApplicationService(request.app.state.core_api)
 
 def _role_service(request: Request):
     return CompanyRoleApplicationService(request.app.state.core_api)
@@ -79,8 +83,13 @@ async def activity(request: Request):
     except ValueError as exc:
         from phoenix_core.errors import ValidationError
         raise ValidationError("Activity limit and offset must be integers.") from exc
-    result = request.app.state.core_api.get_company_activity(
-        context, action=action, target_type=target_type, identity_id=identity_id, limit=limit, offset=offset,
+    result = _activity_service(request).list_activity(
+        context,
+        action=action,
+        target_type=target_type,
+        identity_id=identity_id,
+        limit=limit,
+        offset=offset,
     )
     return {"data": result.data, "request_id": result.request_id}
 

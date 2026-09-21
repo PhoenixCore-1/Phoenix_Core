@@ -574,36 +574,6 @@ class CoreApi:
             "display_name": user.display_name, "status": user.status, "created_at": user.created_at.isoformat(),
         }, request_id=context.request_id)
 
-    def get_company_activity(self, context, *, action=None, target_type=None, identity_id=None, limit=100, offset=0) -> ApiResponse:
-        """Read tenant-scoped Core audit activity for Company Platform oversight."""
-        self.require_permission(context, "company.activity.view")
-        if identity_id is not None:
-            memberships = self.core_service.list_memberships(context.organisation_id)
-            if not any(item.identity_id == identity_id and item.status != "REMOVED" for item in memberships):
-                raise AuthorizationError("Activity identity does not belong to the current organisation.")
-        events = self.core_service.audit_service.list(
-            organisation_id=context.organisation_id,
-            identity_id=identity_id,
-            action=action,
-            target_type=target_type,
-            limit=limit,
-            offset=offset,
-        )
-        return ApiResponse(data={
-            "items": [{
-                "id": str(event.id),
-                "organisation_id": str(event.organisation_id) if event.organisation_id else None,
-                "identity_id": str(event.identity_id) if event.identity_id else None,
-                "action": event.action,
-                "target_type": event.target_type,
-                "target_id": str(event.target_id) if event.target_id else None,
-                "request_id": event.request_id,
-                "created_at": event.created_at.isoformat(),
-            } for event in events],
-            "limit": limit,
-            "offset": offset,
-        }, request_id=context.request_id)
-
     def _audit(self, context, *, action: str, target_type: str, target_id: UUID | None = None) -> None:
         self.core_service.audit_service.record(AuditEvent.create(
             action=action,

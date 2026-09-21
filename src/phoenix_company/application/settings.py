@@ -36,7 +36,10 @@ class CompanySettingsApplicationService:
             include_global=False,
         )
         return ApiResponse(
-            data={"organisation_id": str(context.organisation_id), "items": [self._serialize(item) for item in items]},
+            data={
+                "organisation_id": str(context.organisation_id),
+                "items": [self._serialize(item) for item in items],
+            },
             request_id=context.request_id,
         )
 
@@ -52,10 +55,18 @@ class CompanySettingsApplicationService:
         self.core_api.require_permission(context, "company.configuration.manage")
         key = key.strip()
         existing = self.core.configuration_service.get_setting(
-            key, organisation_id=context.organisation_id, required=False
+            key,
+            organisation_id=context.organisation_id,
+            required=False,
         )
-        effective_type = (value_type or (existing.value_type if existing else "STRING")).strip().upper()
-        effective_description = description if description is not None else (existing.description if existing else None)
+        effective_type = (
+            value_type or (existing.value_type if existing else "STRING")
+        ).strip().upper()
+        effective_description = (
+            description
+            if description is not None
+            else (existing.description if existing else None)
+        )
         setting = self.core.configuration_service.create_setting(
             key,
             value,
@@ -73,4 +84,7 @@ class CompanySettingsApplicationService:
                 request_id=context.request_id,
             )
         )
-        return ApiResponse(data=self._serialize(setting), request_id=context.request_id)
+        return ApiResponse(
+            data=self._serialize(setting),
+            request_id=context.request_id,
+        )

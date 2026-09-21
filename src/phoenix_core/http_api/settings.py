@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from phoenix_core.company.settings import CompanySettingsApplicationService
+from phoenix_company.application.settings import CompanySettingsApplicationService
 from phoenix_core.http_api.authorization import resolve_request_context
 
 router = APIRouter(prefix="/api/v1/company/settings", tags=["Company Platform"])

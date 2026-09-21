@@ -7,6 +7,7 @@ from phoenix_core.api.contracts import ApiResponse
 from phoenix_core.audit.domain import AuditEvent
 from phoenix_core.auth.service import AuthenticationService
 from phoenix_core.authorization.service import AuthorizationService
+from phoenix_core.audit.service import AuditService
 from phoenix_core.errors import AuthorizationError
 from phoenix_core.legal_compliance import LegalComplianceService
 from phoenix_core.ip import IPOwnershipService
@@ -23,6 +24,7 @@ class CoreApi:
         self.core_service = core_service
         self.authentication_service = AuthenticationService(db)
         self.authorization_service = AuthorizationService(db)
+        self.audit_service = AuditService(db)
         self.context_resolver = RequestContextResolver(db, core_service)
         self.legal_compliance_service = LegalComplianceService(db)
         self.ip_ownership_service = IPOwnershipService(self.db)
@@ -583,7 +585,7 @@ class CoreApi:
         }, request_id=context.request_id)
 
     def _audit(self, context, *, action: str, target_type: str, target_id: UUID | None = None) -> None:
-        self.core_service.audit_service.record(AuditEvent.create(
+        self.audit_service.record(AuditEvent.create(
             action=action,
             organisation_id=context.organisation_id,
             identity_id=context.identity_id,

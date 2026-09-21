@@ -14,7 +14,8 @@ from phoenix_core.configuration.domain import decode_value
 class CompanySettingsApplicationService:
     def __init__(self, core_api):
         self.core_api = core_api
-        self.core = core_api.core_service
+        self.configuration_service = core_api.configuration_service
+        self.audit_service = core_api.audit_service
 
     @staticmethod
     def _serialize(setting):
@@ -30,11 +31,16 @@ class CompanySettingsApplicationService:
         }
 
     def list_settings(self, context) -> ApiResponse:
-        self.core_api.require_permission(context, "company.configuration.manage")
-        items = self.core.configuration_service.list_settings(
+        self.core_api.require_permission(
+            context,
+            "company.configuration.manage",
+        )
+
+        items = self.configuration_service.list_settings(
             organisation_id=context.organisation_id,
             include_global=False,
         )
+
         return ApiResponse(
             data={
                 "organisation_id": str(context.organisation_id),
@@ -52,29 +58,38 @@ class CompanySettingsApplicationService:
         value_type: str | None = None,
         description: str | None = None,
     ) -> ApiResponse:
-        self.core_api.require_permission(context, "company.configuration.manage")
+        self.core_api.require_permission(
+            context,
+            "company.configuration.manage",
+        )
+
         key = key.strip()
-        existing = self.core.configuration_service.get_setting(
+
+        existing = self.configuration_service.get_setting(
             key,
             organisation_id=context.organisation_id,
             required=False,
         )
+
         effective_type = (
             value_type or (existing.value_type if existing else "STRING")
         ).strip().upper()
+
         effective_description = (
             description
             if description is not None
             else (existing.description if existing else None)
         )
-        setting = self.core.configuration_service.create_setting(
+
+        setting = self.configuration_service.create_setting(
             key,
             value,
             effective_type,
             organisation_id=context.organisation_id,
             description=effective_description,
         )
-        self.core.audit_service.record(
+
+        self.audit_service.record(
             AuditEvent.create(
                 action="COMPANY_SETTING_UPDATED",
                 organisation_id=context.organisation_id,
@@ -84,6 +99,7 @@ class CompanySettingsApplicationService:
                 request_id=context.request_id,
             )
         )
+
         return ApiResponse(
             data=self._serialize(setting),
             request_id=context.request_id,

@@ -1,38 +1,66 @@
-﻿from phoenix_core.api.application import CoreApi
+from phoenix_core.api.application import CoreApi
 from phoenix_core.api.contracts import ApiResponse
+from phoenix_core.infrastructure import SQLiteDatabase
+from phoenix_core.errors import AuthenticationError, AuthorizationError
+from phoenix_core.security.context import RequestContext
+from phoenix_system.application.companies import SystemCompanyApplicationService
 
 
-def make_service(tmp_path):
-    from phoenix_core.infrastructure import SQLiteDatabase
-    from phoenix_core.services import CoreFoundationService
-
+def make_services(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "api.db"))
-    service = CoreFoundationService(db)
-    service.initialise()
-    return db, service
+    db.initialise_schema()
 
+    api = CoreApi(db)
+    system_company_service = SystemCompanyApplicationService(api)
 
-def setup_user(service):
-    org = service.create_organisation("API-TEST", "API Test Organisation")
-    user = service.create_user(
-        "apiuser",
-        "API User",
-        "CorrectPassword123!",
+    return (
+        db,
+        api,
+        api.user_service,
+        api.company_membership_service,
+        api.authentication_service,
+        system_company_service,
     )
-    service.add_membership(user.identity_id, org.id)
+
+
+def setup_user(
+    user_service,
+    membership_service,
+    system_company_service,
+    code="API-TEST",
+):
+    org = system_company_service.create_company(
+        code=code,
+        name="API Test Organisation",
+    )
+
+    user = user_service.create_user(
+        username="apiuser",
+        display_name="API User",
+        password="CorrectPassword123!",
+    )
+
+    membership_service.add_membership(
+        user.identity_id,
+        org.id,
+    )
+
     return user, org
 
 
 def test_current_identity_endpoint_returns_api_response(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    session, token = service.authenticate(
-        user.username,
-        "CorrectPassword123!",
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
     )
 
-    api = CoreApi(db, service)
+    session, token = authentication_service.authenticate(
+        user.username,
+        "CorrectPassword123!",
+        org.id,
+    )
 
     response = api.get_current_identity(
         request_id="req-api-001",
@@ -50,22 +78,23 @@ def test_current_identity_endpoint_returns_api_response(tmp_path):
 
 
 def test_current_identity_endpoint_enforces_tenant_boundary(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    other_org = service.create_organisation(
-        "API-OTHER",
-        "Other Organisation",
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
     )
 
-    session, token = service.authenticate(
+    other_org = system_company_service.create_company(
+        code="API-OTHER",
+        name="Other Organisation",
+    )
+
+    session, token = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
+        org.id,
     )
-
-    api = CoreApi(db, service)
-
-    from phoenix_core.errors import AuthenticationError
 
     try:
         api.get_current_identity(
@@ -74,16 +103,14 @@ def test_current_identity_endpoint_enforces_tenant_boundary(tmp_path):
             organisation_id=other_org.id,
         )
         assert False, "Expected AuthenticationError"
-    except AuthenticationError:
+    except AuthorizationError:
         pass
 
     db.close()
 
-def test_api_permission_guard_allows_granted_permission(tmp_path):
-    from phoenix_core.security.context import RequestContext
 
-    db, service = make_service(tmp_path)
-    api = CoreApi(db, service)
+def test_api_permission_guard_allows_granted_permission(tmp_path):
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
 
     context = RequestContext(
         request_id="req-api-003",
@@ -96,11 +123,7 @@ def test_api_permission_guard_allows_granted_permission(tmp_path):
 
 
 def test_api_permission_guard_rejects_missing_permission(tmp_path):
-    from phoenix_core.security.context import RequestContext
-    from phoenix_core.errors import AuthorizationError
-
-    db, service = make_service(tmp_path)
-    api = CoreApi(db, service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
 
     context = RequestContext(
         request_id="req-api-004",
@@ -117,10 +140,7 @@ def test_api_permission_guard_rejects_missing_permission(tmp_path):
 
 
 def test_api_entitlement_guard_allows_enabled_module(tmp_path):
-    from phoenix_core.security.context import RequestContext
-
-    db, service = make_service(tmp_path)
-    api = CoreApi(db, service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
 
     context = RequestContext(
         request_id="req-api-005",
@@ -133,11 +153,7 @@ def test_api_entitlement_guard_allows_enabled_module(tmp_path):
 
 
 def test_api_entitlement_guard_rejects_missing_module(tmp_path):
-    from phoenix_core.security.context import RequestContext
-    from phoenix_core.errors import AuthorizationError
-
-    db, service = make_service(tmp_path)
-    api = CoreApi(db, service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
 
     context = RequestContext(
         request_id="req-api-006",
@@ -152,11 +168,14 @@ def test_api_entitlement_guard_rejects_missing_module(tmp_path):
 
     db.close()
 
-def test_api_authenticate_returns_session_token(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
 
-    api = CoreApi(db, service)
+def test_api_authenticate_returns_session_token(tmp_path):
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
+    )
 
     response = api.authenticate(
         request_id="req-api-auth-001",
@@ -177,12 +196,12 @@ def test_api_authenticate_returns_session_token(tmp_path):
 
 
 def test_api_authenticate_rejects_invalid_credentials(tmp_path):
-    from phoenix_core.errors import AuthenticationError
-
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    api = CoreApi(db, service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
+    )
 
     try:
         api.authenticate(
@@ -199,10 +218,12 @@ def test_api_authenticate_rejects_invalid_credentials(tmp_path):
 
 
 def test_api_revoke_session_revokes_active_session(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    api = CoreApi(db, service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
+    )
 
     auth_response = api.authenticate(
         request_id="req-api-auth-003",
@@ -226,10 +247,12 @@ def test_api_revoke_session_revokes_active_session(tmp_path):
 
 
 def test_api_revoke_unknown_session_returns_false(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    api = CoreApi(db, service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
+    )
 
     response = api.revoke_session(
         request_id="req-api-auth-005",
@@ -241,13 +264,16 @@ def test_api_revoke_unknown_session_returns_false(tmp_path):
 
     db.close()
 
+
 def test_api_current_organisation_returns_current_tenant(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
+    )
 
-    api = CoreApi(db, service)
-
-    session, token = api.authentication_service.authenticate(
+    session, token = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -271,19 +297,19 @@ def test_api_current_organisation_returns_current_tenant(tmp_path):
 
 
 def test_api_current_organisation_rejects_other_tenant(tmp_path):
-    from phoenix_core.errors import AuthenticationError
-
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    other_org = service.create_organisation(
-        "API-OTHER",
-        "Other Organisation",
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
     )
 
-    api = CoreApi(db, service)
+    other_org = system_company_service.create_company(
+        code="API-OTHER",
+        name="Other Organisation",
+    )
 
-    session, token = api.authentication_service.authenticate(
+    session, token = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -296,19 +322,21 @@ def test_api_current_organisation_rejects_other_tenant(tmp_path):
             organisation_id=other_org.id,
         )
         assert False, "Expected AuthenticationError"
-    except AuthenticationError:
+    except AuthorizationError:
         pass
 
     db.close()
 
 
 def test_api_current_user_returns_authenticated_user_without_password_hash(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
+    )
 
-    api = CoreApi(db, service)
-
-    session, token = api.authentication_service.authenticate(
+    session, token = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -334,19 +362,19 @@ def test_api_current_user_returns_authenticated_user_without_password_hash(tmp_p
 
 
 def test_api_current_user_rejects_other_tenant(tmp_path):
-    from phoenix_core.errors import AuthenticationError
-
-    db, service = make_service(tmp_path)
-    user, org = setup_user(service)
-
-    other_org = service.create_organisation(
-        "API-OTHER",
-        "Other Organisation",
+    db, api, user_service, membership_service, authentication_service, system_company_service = make_services(tmp_path)
+    user, org = setup_user(
+        user_service,
+        membership_service,
+        system_company_service,
     )
 
-    api = CoreApi(db, service)
+    other_org = system_company_service.create_company(
+        code="API-OTHER",
+        name="Other Organisation",
+    )
 
-    session, token = api.authentication_service.authenticate(
+    session, token = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -359,7 +387,9 @@ def test_api_current_user_rejects_other_tenant(tmp_path):
             organisation_id=other_org.id,
         )
         assert False, "Expected AuthenticationError"
-    except AuthenticationError:
+    except AuthorizationError:
         pass
 
     db.close()
+
+

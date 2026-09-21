@@ -7,6 +7,7 @@ from phoenix_core.api.contracts import ApiResponse
 from phoenix_core.audit.domain import AuditEvent
 from phoenix_core.auth.service import AuthenticationService
 from phoenix_core.authorization.service import AuthorizationService
+from phoenix_core.configuration.service import ConfigurationService
 from phoenix_core.audit.service import AuditService
 from phoenix_core.errors import AuthorizationError
 from phoenix_core.legal_compliance import LegalComplianceService
@@ -27,6 +28,7 @@ class CoreApi:
         self.db = db
         self.authentication_service = AuthenticationService(db)
         self.authorization_service = AuthorizationService(db)
+        self.configuration_service = ConfigurationService(db)
         self.role_service = RoleService(db)
         self.audit_service = AuditService(db)
         self.entitlement_service = EntitlementService(db)

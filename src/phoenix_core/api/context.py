@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from phoenix_core.errors import AuthenticationError
+from phoenix_core.authorization.service import AuthorizationService
 from phoenix_core.security.context import RequestContext
 from phoenix_core.sessions.service import SessionService
 
@@ -13,6 +14,7 @@ class RequestContextResolver:
     def __init__(self, db, core_service):
         self.db = db
         self.core_service = core_service
+        self.authorization_service = AuthorizationService(db)
         self.session_service = SessionService(db)
 
     def resolve(
@@ -71,7 +73,7 @@ class RequestContextResolver:
                 "User is not an active member of this organisation."
             )
 
-        permissions = self.core_service.effective_permissions(
+        permissions = self.authorization_service.effective_permissions(
             identity_id,
             organisation_id,
         )

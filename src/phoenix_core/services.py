@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from phoenix_core.audit.domain import AuditEvent
 from phoenix_core.audit.service import AuditService
+from phoenix_core.authorization.service import AuthorizationService
 from phoenix_core.configuration.service import ConfigurationService
 from phoenix_core.communications.service import CommunicationsService
 from phoenix_core.errors import AuthenticationError, AuthorizationError, ConflictError, NotFoundError, ValidationError
@@ -28,12 +29,13 @@ class CoreFoundationService:
     def __init__(self, db: SQLiteDatabase, *, realtime_publisher=None):
         self.db = db
         self.audit_service = AuditService(db)
+        self.authorization_service = AuthorizationService(db)
         self.module_service = ModuleService(db)
         self.entitlement_service = EntitlementService(db)
         self.configuration_service = ConfigurationService(db)
         self.communications_service = CommunicationsService(
             db,
-            authorize=self.authorize,
+            authorize=self.authorization_service.authorize,
             audit_record=self.audit_service.record,
             realtime_publisher=realtime_publisher,
         )
@@ -485,26 +487,6 @@ class CoreFoundationService:
         self.db.commit()
         return cur.rowcount == 1
 
-    def effective_permissions(self, identity_id: UUID, organisation_id: UUID) -> set[str]:
-        rows = self.db.execute(
-            """
-            SELECT DISTINCT p.code
-            FROM organisation_memberships m
-            JOIN organisations o ON o.id = m.organisation_id
-            JOIN role_assignments ra ON ra.membership_id = m.id
-            JOIN roles r ON r.id = ra.role_id
-            JOIN role_permissions rp ON rp.role_id = r.id
-            JOIN permissions p ON p.id = rp.permission_id
-            WHERE m.identity_id=? AND m.organisation_id=?
-              AND m.status='ACTIVE' AND o.status='ACTIVE' AND r.status='ACTIVE'
-            """,
-            (str(identity_id), str(organisation_id)),
-        ).fetchall()
-        return {row["code"] for row in rows}
-
-    def authorize(self, identity_id: UUID, organisation_id: UUID, permission: str) -> bool:
-        return permission in self.effective_permissions(identity_id, organisation_id)
-
     # Phase 2.5 — Module registry and organisation entitlements
 
     def register_module(self, code: str, name: str, version: str):
@@ -596,7 +578,7 @@ class CoreFoundationService:
         if not membership:
             return False
 
-        return self.authorize(identity_id, organisation_id, permission)
+        return self.authorization_service.authorize(identity_id, organisation_id, permission)
     def create_setting(self, key, value, value_type="STRING", *, organisation_id=None, description=None):
         return self.configuration_service.create_setting(key, value, value_type, organisation_id=organisation_id, description=description)
 
@@ -650,5 +632,7 @@ class CoreFoundationService:
             limit=limit,
             offset=offset,
         )
+
+
 
 

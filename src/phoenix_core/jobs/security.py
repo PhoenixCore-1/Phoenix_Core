@@ -1,7 +1,8 @@
-﻿"""Phoenix Core background-job security boundary."""
+"""Phoenix Core background-job security boundary."""
 
 from uuid import UUID
 
+from phoenix_core.authorization.service import AuthorizationService
 from phoenix_core.errors import AuthenticationError, AuthorizationError
 from phoenix_core.jobs.domain import Job
 from phoenix_core.security.context import RequestContext
@@ -13,6 +14,7 @@ class JobSecurityService:
     def __init__(self, db, core_service):
         self.db = db
         self.core_service = core_service
+        self.authorization_service = AuthorizationService(db)
 
     def validate_execution(
         self,
@@ -85,7 +87,7 @@ class JobSecurityService:
                 )
 
         if required_permission is not None:
-            permissions = self.core_service.effective_permissions(
+            permissions = self.authorization_service.effective_permissions(
                 identity_id,
                 organisation_id,
             )
@@ -107,3 +109,4 @@ class JobSecurityService:
                 raise AuthorizationError(
                     "Job module entitlement is not active."
                 )
+

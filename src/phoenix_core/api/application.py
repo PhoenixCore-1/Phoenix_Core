@@ -6,6 +6,7 @@ from phoenix_core.api.context import RequestContextResolver
 from phoenix_core.api.contracts import ApiResponse
 from phoenix_core.audit.domain import AuditEvent
 from phoenix_core.auth.service import AuthenticationService
+from phoenix_core.authorization.service import AuthorizationService
 from phoenix_core.errors import AuthorizationError
 from phoenix_core.legal_compliance import LegalComplianceService
 from phoenix_core.ip import IPOwnershipService
@@ -19,6 +20,7 @@ class CoreApi:
         self.db = db
         self.core_service = core_service
         self.authentication_service = AuthenticationService(db)
+        self.authorization_service = AuthorizationService(db)
         self.context_resolver = RequestContextResolver(db, core_service)
         self.legal_compliance_service = LegalComplianceService(db)
         self.ip_ownership_service = IPOwnershipService(self.db)
@@ -570,7 +572,7 @@ class CoreApi:
 
     def get_current_user(self, *, request_id: str, session_id, organisation_id=None) -> ApiResponse:
         context = self.resolve_context(request_id=request_id, session_id=session_id, organisation_id=organisation_id)
-        user = self.core_service.get_user_by_identity(context.identity_id)
+        user = self.user_service.get_user_by_identity(context.identity_id)
         return ApiResponse(data={
             "id": str(user.id), "identity_id": str(user.identity_id), "username": user.username,
             "display_name": user.display_name, "status": user.status, "created_at": user.created_at.isoformat(),
@@ -764,5 +766,7 @@ class CoreApi:
         )
 
         return ApiResponse(data=assignment, request_id=context.request_id)
+
+
 
 

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Query, Request
 
-from phoenix_core.company.monitoring import CompanyComplianceMonitoringService
+from phoenix_company.application.monitoring import CompanyComplianceMonitoringService
 from phoenix_core.http_api.authorization import resolve_request_context
 
 router = APIRouter(prefix="/api/v1/company/compliance/monitoring", tags=["Company Platform"])

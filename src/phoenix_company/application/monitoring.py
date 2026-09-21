@@ -21,7 +21,9 @@ class CompanyComplianceMonitoringService:
         if not value:
             return None
         try:
-            return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(timezone.utc)
+            return datetime.fromisoformat(
+                str(value).replace("Z", "+00:00")
+            ).astimezone(timezone.utc)
         except (TypeError, ValueError):
             return None
 
@@ -44,21 +46,32 @@ class CompanyComplianceMonitoringService:
         ).fetchall()
 
         items = []
-        counts = {"CURRENT": 0, "EXPIRING_SOON": 0, "EXPIRED": 0, "NO_EXPIRY": 0}
+        counts = {
+            "CURRENT": 0,
+            "EXPIRING_SOON": 0,
+            "EXPIRED": 0,
+            "NO_EXPIRY": 0,
+        }
+
         for row in rows:
             expiry = self._parse(row["valid_until"])
+
             if expiry is None:
                 state = "NO_EXPIRY"
                 counts[state] += 1
                 days_remaining = None
             else:
-                days_remaining = int((expiry - now).total_seconds() // 86400)
+                days_remaining = int(
+                    (expiry - now).total_seconds() // 86400
+                )
+
                 if expiry <= now:
                     state = "EXPIRED"
                 elif expiry.timestamp() <= cutoff:
                     state = "EXPIRING_SOON"
                 else:
                     state = "CURRENT"
+
                 counts[state] += 1
 
             items.append({
@@ -83,7 +96,9 @@ class CompanyComplianceMonitoringService:
                 "window_days": days,
                 "evaluated_at": now.isoformat(),
                 "summary": counts,
-                "action_required": counts["EXPIRED"] + counts["EXPIRING_SOON"],
+                "action_required": (
+                    counts["EXPIRED"] + counts["EXPIRING_SOON"]
+                ),
                 "items": items,
                 "mutations_performed": False,
             },

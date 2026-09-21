@@ -2,14 +2,14 @@
 
 from fastapi import APIRouter, Request
 
-from phoenix_core.company.application import CompanyPlatformApplicationService
+from phoenix_company.application.workspaces import CompanyWorkspaceApplicationService
 from phoenix_core.http_api.authorization import resolve_request_context
 
 router = APIRouter(prefix="/api/v1/company/workspaces", tags=["Company Platform"])
 
 
-def _application(request: Request) -> CompanyPlatformApplicationService:
-    return CompanyPlatformApplicationService(request.app.state.core_api)
+def _application(request: Request) -> CompanyWorkspaceApplicationService:
+    return CompanyWorkspaceApplicationService(request.app.state.core_api)
 
 
 @router.get("")

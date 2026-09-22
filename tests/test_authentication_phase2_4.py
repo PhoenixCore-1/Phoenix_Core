@@ -3,24 +3,33 @@ from phoenix_core.auth.service import AuthenticationService
 from phoenix_core.errors import AuthenticationError, ValidationError
 from phoenix_core.infrastructure import SQLiteDatabase
 from phoenix_core.security.passwords import verify_password
-from phoenix_core.services import CoreFoundationService
 from phoenix_core.sessions.service import SessionService
 
-def make_service(tmp_path):
+def make_services(tmp_path):
+    from phoenix_core.api.application import CoreApi
     db = SQLiteDatabase(tmp_path / "test.db")
-    service = CoreFoundationService(db)
-    service.initialise()
-    return db, service
+    db.initialise_schema()
+    api = CoreApi(db)
+    return (
+        db,
+        api.organisation_service,
+        api.user_service,
+        api.company_membership_service,
+    )
 
-def setup_user(service, username="authuser"):
-    org = service.create_organisation("AUTH", "Auth Org")
-    user = service.create_user(username, "Auth User", "CorrectPassword123!")
-    membership = service.add_membership(user.identity_id, org.id)
+def setup_user(organisations, users, memberships, username="authuser"):
+    org = organisations.create_organisation("AUTH", "Auth Org")
+    user = users.create_user(
+        username=username,
+        display_name="Auth User",
+        password="CorrectPassword123!",
+    )
+    membership = memberships.add_membership(user.identity_id, org.id)
     return user, org, membership
 
 def test_authentication_creates_active_session(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org, _ = setup_user(service)
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, org, _ = setup_user(organisations, users, memberships)
     session, token = AuthenticationService(db).authenticate(
         user.username, "CorrectPassword123!", org.id
     )
@@ -31,23 +40,23 @@ def test_authentication_creates_active_session(tmp_path):
     db.close()
 
 def test_bad_credentials_are_rejected(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org, _ = setup_user(service, "badcred")
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, org, _ = setup_user(organisations, users, memberships, "badcred")
     with pytest.raises(AuthenticationError):
         AuthenticationService(db).authenticate(user.username, "wrong", org.id)
     db.close()
 
 def test_inactive_membership_cannot_authenticate_to_org(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org, membership = setup_user(service, "inactive")
-    service.suspend_membership(membership.id)
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, org, membership = setup_user(organisations, users, memberships, "inactive")
+    memberships.suspend_membership(membership.id)
     with pytest.raises(AuthenticationError):
         AuthenticationService(db).authenticate(user.username, "CorrectPassword123!", org.id)
     db.close()
 
 def test_session_revoke_and_revoke_all_work(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org, _ = setup_user(service, "revoke")
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, org, _ = setup_user(organisations, users, memberships, "revoke")
     auth = AuthenticationService(db)
     first, _ = auth.authenticate(user.username, "CorrectPassword123!", org.id)
     second, _ = auth.authenticate(user.username, "CorrectPassword123!", org.id)
@@ -59,8 +68,8 @@ def test_session_revoke_and_revoke_all_work(tmp_path):
     db.close()
 
 def test_password_change_requires_current_password_and_updates_hash(tmp_path):
-    db, service = make_service(tmp_path)
-    user, _, _ = setup_user(service, "pwchange")
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, _, _ = setup_user(organisations, users, memberships, "pwchange")
     auth = AuthenticationService(db)
     with pytest.raises(AuthenticationError):
         auth.change_password(user.id, "wrong", "NewPassword12345!")
@@ -70,8 +79,8 @@ def test_password_change_requires_current_password_and_updates_hash(tmp_path):
     db.close()
 
 def test_password_change_enforces_minimum(tmp_path):
-    db, service = make_service(tmp_path)
-    user, _, _ = setup_user(service, "pwmin")
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, _, _ = setup_user(organisations, users, memberships, "pwmin")
     with pytest.raises(ValidationError):
         AuthenticationService(db).change_password(
             user.id, "CorrectPassword123!", "short"
@@ -80,8 +89,8 @@ def test_password_change_enforces_minimum(tmp_path):
 
 
 def test_organisation_scoped_authentication_returns_identity_session(tmp_path):
-    db, service = make_service(tmp_path)
-    user, org, _ = setup_user(service, "orgscope")
+    db, organisations, users, memberships = make_services(tmp_path)
+    user, org, _ = setup_user(organisations, users, memberships, "orgscope")
 
     session, token = AuthenticationService(db).authenticate(
         user.username,

@@ -2,16 +2,8 @@
 
 import sqlite3
 from pathlib import Path
+from phoenix_core.migration_runner import apply_all
 
-
-MIGRATIONS = [
-    "001_core_foundation.sql",
-    "002_core_configuration.sql",
-    "003_core_communications.sql",
-    "004_core_documents.sql",
-    "005_core_jobs.sql",
-    "006_core_legal_policy_acceptance.sql",
-]
 
 
 class SQLiteDatabase:
@@ -31,16 +23,7 @@ class SQLiteDatabase:
         self.connection.execute("PRAGMA foreign_keys = ON")
 
     def initialise_schema(self):
-        migrations_path = (
-            Path(__file__).resolve().parents[2] / "migrations"
-        )
-
-        for migration_name in MIGRATIONS:
-            migration_path = migrations_path / migration_name
-            schema = migration_path.read_text(encoding="utf-8")
-            self.connection.executescript(schema)
-
-        self.connection.commit()
+        apply_all(self)
 
     def close(self):
         self.connection.close()

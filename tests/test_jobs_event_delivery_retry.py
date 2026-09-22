@@ -3,11 +3,11 @@ from uuid import uuid4
 import pytest
 
 from phoenix_core.infrastructure import SQLiteDatabase
+from phoenix_core.api.application import CoreApi
 from phoenix_core.jobs.event_delivery import CoreEventDeliveryScheduler
 from phoenix_core.jobs.registry import JobExecutorRegistry
 from phoenix_core.jobs.service import JobService
 from phoenix_core.jobs.worker import JobWorker
-from phoenix_core.services import CoreFoundationService
 from phoenix_framework.context import FrameworkContext
 from phoenix_framework.contracts.delivery import EventDelivery
 from phoenix_framework.contracts.event import ModuleEvent
@@ -19,18 +19,14 @@ from phoenix_framework.integration.events import EventBus
 
 def make_environment(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
 
-    organisation = core.create_organisation(
-        f"ORG-{uuid4().hex[:8].upper()}",
-        f"Test Organisation {uuid4().hex[:8]}",
+    core = CoreApi(db)
+
+    organisation = core.organisation_service.create_organisation(code=f"ORG-{uuid4().hex[:8].upper()}", name=f"Test Organisation {uuid4().hex[:8]}",
     )
 
-    user = core.create_user(
-        f"user_{uuid4().hex[:8]}",
-        "Test User",
-        "TestPassword123!",
+    user = core.user_service.create_user(username=f"user_{uuid4().hex[:8]}", display_name="Test User", password="TestPassword123!",
     )
 
     job_service = JobService(db)

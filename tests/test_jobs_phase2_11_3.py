@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 
 import pytest
 from uuid import uuid4
@@ -7,29 +7,22 @@ from phoenix_core.errors import ValidationError
 from phoenix_core.infrastructure import SQLiteDatabase
 from phoenix_core.jobs.contracts import JobRequest
 from phoenix_core.jobs.service import JobService
-from phoenix_core.services import CoreFoundationService
+from phoenix_core.api.application import CoreApi
 
 
 def make_service(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
+    core = CoreApi(db)
     return db, core, JobService(db)
 
 
 def make_organisation(core):
-    return core.create_organisation(
-        f"ORG-{uuid4().hex[:8].upper()}",
-        f"Test Organisation {uuid4().hex[:8]}",
-    )
+    return core.organisation_service.create_organisation(code=f"ORG-{uuid4().hex[:8].upper()}", name=f"Test Organisation {uuid4().hex[:8]}")
 
 
 def make_user(core):
-    return core.create_user(
-        f"user_{uuid4().hex[:8]}",
-        "Test User",
-        "TestPassword123!",
-    )
+    return core.user_service.create_user(username=f"user_{uuid4().hex[:8]}", display_name="Test User", password="TestPassword123!")
 
 
 def test_enqueue_creates_queued_job(tmp_path):

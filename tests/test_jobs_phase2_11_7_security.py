@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -8,33 +8,26 @@ from phoenix_core.jobs.contracts import JobRequest
 from phoenix_core.jobs.security import JobSecurityService
 from phoenix_core.jobs.service import JobService
 from phoenix_core.security.context import RequestContext
-from phoenix_core.services import CoreFoundationService
+from phoenix_core.api.application import CoreApi
 
 
 def make_service(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
+    core = CoreApi(db)
     jobs = JobService(db)
-    security = JobSecurityService(db, core)
+    security = JobSecurityService(db, core.authorization_service)
     return db, core, jobs, security
 
 
 def make_organisation(core, suffix=None):
     suffix = suffix or uuid4().hex[:8].upper()
-    return core.create_organisation(
-        f"ORG-{suffix}",
-        f"Test Organisation {suffix}",
-    )
+    return core.organisation_service.create_organisation(code=f"ORG-{suffix}", name=f"Test Organisation {suffix}")
 
 
 def make_user(core, suffix=None):
     suffix = suffix or uuid4().hex[:8]
-    return core.create_user(
-        f"user_{suffix}",
-        "Test User",
-        "TestPassword123!",
-    )
+    return core.user_service.create_user(username=f"user_{suffix}", display_name="Test User", password="TestPassword123!")
 
 
 def test_tenant_job_requires_active_membership(tmp_path):
@@ -64,7 +57,7 @@ def test_tenant_job_allows_active_member(tmp_path):
     organisation = make_organisation(core)
     user = make_user(core)
 
-    core.add_membership(user.identity_id, organisation.id)
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -87,7 +80,7 @@ def test_cross_tenant_context_rejected(tmp_path):
     organisation_b = make_organisation(core, "B")
     user = make_user(core)
 
-    core.add_membership(user.identity_id, organisation_a.id)
+    core.company_membership_service.add_membership(user.identity_id, organisation_a.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -117,8 +110,8 @@ def test_cross_identity_context_rejected(tmp_path):
     user_a = make_user(core, "A")
     user_b = make_user(core, "B")
 
-    core.add_membership(user_a.identity_id, organisation.id)
-    core.add_membership(user_b.identity_id, organisation.id)
+    core.company_membership_service.add_membership(user_a.identity_id, organisation.id)
+    core.company_membership_service.add_membership(user_b.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -147,7 +140,7 @@ def test_inactive_identity_rejected(tmp_path):
     organisation = make_organisation(core)
     user = make_user(core)
 
-    core.add_membership(user.identity_id, organisation.id)
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -158,7 +151,7 @@ def test_inactive_identity_rejected(tmp_path):
         )
     )
 
-    core.deactivate_user(user.id)
+    core.user_service.deactivate_user(user.id)
 
     with pytest.raises(AuthorizationError):
         security.validate_execution(job)
@@ -172,7 +165,7 @@ def test_inactive_organisation_rejected(tmp_path):
     organisation = make_organisation(core)
     user = make_user(core)
 
-    core.add_membership(user.identity_id, organisation.id)
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -183,7 +176,7 @@ def test_inactive_organisation_rejected(tmp_path):
         )
     )
 
-    core.suspend_organisation(organisation.id)
+    core.organisation_service.suspend_organisation(organisation.id)
 
     with pytest.raises(AuthorizationError):
         security.validate_execution(job)
@@ -197,7 +190,7 @@ def test_missing_permission_rejected(tmp_path):
     organisation = make_organisation(core)
     user = make_user(core)
 
-    core.add_membership(user.identity_id, organisation.id)
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(

@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from phoenix_core.errors import AuthorizationError, ConflictError, NotFoundError, ValidationError
 from phoenix_core.infrastructure import SQLiteDatabase
-from phoenix_core.services import CoreFoundationService
+from phoenix_core.api.application import CoreApi
 
 
 COMMUNICATION_PERMISSIONS = [
@@ -18,32 +18,60 @@ COMMUNICATION_PERMISSIONS = [
 
 def make_service(tmp_path):
     db = SQLiteDatabase(tmp_path / "test.db")
-    service = CoreFoundationService(db)
-    service.initialise()
-    return db, service
+    api = CoreApi(db)
+    db.initialise_schema()
+    return db, api
 
 
-def setup_company(service):
-    org = service.create_organisation("C1", "Company")
-    user1 = service.create_user("u1", "User 1", "Correct-Horse-Battery")
-    user2 = service.create_user("u2", "User 2", "Correct-Horse-Battery")
+def setup_company(api):
+    org = api.organisation_service.create_organisation(
+        code="C1",
+        name="Company",
+    )
 
-    membership1 = service.add_membership(user1.identity_id, org.id)
-    membership2 = service.add_membership(user2.identity_id, org.id)
+    user1 = api.user_service.create_user(
+        username="u1",
+        display_name="User 1",
+        password="Correct-Horse-Battery",
+    )
+    user2 = api.user_service.create_user(
+        username="u2",
+        display_name="User 2",
+        password="Correct-Horse-Battery",
+    )
 
-    role = service.create_role(
+    membership1 = api.company_membership_service.add_membership(
+        user1.identity_id,
         org.id,
-        "communications_test_role",
-        "Communications Test Role",
+    )
+    membership2 = api.company_membership_service.add_membership(
+        user2.identity_id,
+        org.id,
+    )
+
+    role = api.role_service.create_role(
+        org.id,
+        "COMMUNICATIONS",
+        "Communications",
     )
 
     for permission_code in COMMUNICATION_PERMISSIONS:
-        permission = service.get_permission_by_code(permission_code)
-        assert permission is not None
-        service.grant_permission(role.id, permission.id)
+        permission = api.role_service.get_permission_by_code(
+            permission_code
+        )
+        api.role_service.grant_permission(
+            role.id,
+            permission.id,
+        )
 
-    service.assign_role(membership1.id, role.id)
-    service.assign_role(membership2.id, role.id)
+    api.role_service.assign_role(
+        membership1.id,
+        role.id,
+    )
+    api.role_service.assign_role(
+        membership2.id,
+        role.id,
+    )
 
     return org, user1, user2
 
@@ -73,13 +101,9 @@ def test_channel_and_membership_and_tenant_isolation(tmp_path):
             user2.identity_id,
         )["name"] == "Engineering"
 
-        other_org = core.create_organisation("C2", "Other")
-        other_user = core.create_user(
-            "u3",
-            "User 3",
-            "Correct-Horse-Battery",
-        )
-        core.add_membership(other_user.identity_id, other_org.id)
+        other_org = core.organisation_service.create_organisation(code="C2", name="Other")
+        other_user = core.user_service.create_user(username="u3", display_name="User 3", password="Correct-Horse-Battery")
+        core.company_membership_service.add_membership(other_user.identity_id, other_org.id)
 
         with pytest.raises(AuthorizationError):
             communications.get_channel(
@@ -252,20 +276,16 @@ def test_permission_enforcement(tmp_path):
     db, core = make_service(tmp_path)
 
     try:
-        org = core.create_organisation("C1", "Company")
-        user = core.create_user(
-            "u1",
-            "User 1",
-            "Correct-Horse-Battery",
-        )
-        membership = core.add_membership(user.identity_id, org.id)
+        org = core.organisation_service.create_organisation(code="C1", name="Company")
+        user = core.user_service.create_user(username="u1", display_name="User 1", password="Correct-Horse-Battery")
+        membership = core.company_membership_service.add_membership(user.identity_id, org.id)
 
-        role = core.create_role(
+        role = core.role_service.create_role(
             org.id,
             "communications_limited_role",
             "Communications Limited Role",
         )
-        core.assign_role(membership.id, role.id)
+        core.role_service.assign_role(membership.id, role.id)
 
         communications = core.communications_service
 
@@ -277,10 +297,10 @@ def test_permission_enforcement(tmp_path):
                 "Engineering",
             )
 
-        permission = core.get_permission_by_code(
+        permission = core.role_service.get_permission_by_code(
             "communications.channel.create"
         )
-        core.grant_permission(role.id, permission.id)
+        core.role_service.grant_permission(role.id, permission.id)
 
         channel = communications.create_channel(
             user.identity_id,
@@ -296,10 +316,10 @@ def test_permission_enforcement(tmp_path):
                 "Should fail",
             )
 
-        permission = core.get_permission_by_code(
+        permission = core.role_service.get_permission_by_code(
             "communications.message.send"
         )
-        core.grant_permission(role.id, permission.id)
+        core.role_service.grant_permission(role.id, permission.id)
 
         message = communications.send_message(
             channel["id"],
@@ -322,31 +342,25 @@ def test_presence_is_tenant_scoped(tmp_path):
     db, core = make_service(tmp_path)
 
     try:
-        org1 = core.create_organisation("C1", "Company 1")
-        org2 = core.create_organisation("C2", "Company 2")
+        org1 = core.organisation_service.create_organisation(code="C1", name="Company 1")
+        org2 = core.organisation_service.create_organisation(code="C2", name="Company 2")
 
-        user = core.create_user(
-            "u1",
-            "User 1",
-            "Correct-Horse-Battery",
+        user = core.user_service.create_user(username="u1", display_name="User 1", password="Correct-Horse-Battery")
+
+        membership = core.company_membership_service.add_membership(user.identity_id, org1.id,
         )
 
-        membership = core.add_membership(
-            user.identity_id,
-            org1.id,
-        )
-
-        role = core.create_role(
+        role = core.role_service.create_role(
             org1.id,
             "presence_role",
             "Presence Role",
         )
 
-        permission = core.get_permission_by_code(
+        permission = core.role_service.get_permission_by_code(
             "communications.presence.update"
         )
-        core.grant_permission(role.id, permission.id)
-        core.assign_role(membership.id, role.id)
+        core.role_service.grant_permission(role.id, permission.id)
+        core.role_service.assign_role(membership.id, role.id)
 
         communications = core.communications_service
 
@@ -417,7 +431,7 @@ def test_communications_write_operations_create_audit_events(tmp_path):
             "ONLINE",
         )
 
-        events = core.list_audit_events(
+        events = core.audit_service.list(
             organisation_id=org.id,
             limit=100,
         )
@@ -603,13 +617,9 @@ def test_direct_channel_rejects_self_and_cross_tenant_target(tmp_path):
                 user1.identity_id,
             )
 
-        org2 = core.create_organisation("C2", "Other Company")
-        user3 = core.create_user(
-            "u3",
-            "User 3",
-            "Correct-Horse-Battery",
-        )
-        core.add_membership(user3.identity_id, org2.id)
+        org2 = core.organisation_service.create_organisation(code="C2", name="Other Company")
+        user3 = core.user_service.create_user(username="u3", display_name="User 3", password="Correct-Horse-Battery")
+        core.company_membership_service.add_membership(user3.identity_id, org2.id)
 
         with pytest.raises(AuthorizationError):
             communications.create_direct_channel(
@@ -626,33 +636,21 @@ def test_direct_channel_permission_enforcement(tmp_path):
     db, core = make_service(tmp_path)
 
     try:
-        org = core.create_organisation("C1", "Company")
-        user1 = core.create_user(
-            "u1",
-            "User 1",
-            "Correct-Horse-Battery",
+        org = core.organisation_service.create_organisation(code="C1", name="Company")
+        user1 = core.user_service.create_user(username="u1", display_name="User 1", password="Correct-Horse-Battery")
+        user2 = core.user_service.create_user(username="u2", display_name="User 2", password="Correct-Horse-Battery")
+
+        membership1 = core.company_membership_service.add_membership(user1.identity_id, org.id,
         )
-        user2 = core.create_user(
-            "u2",
-            "User 2",
-            "Correct-Horse-Battery",
+        core.company_membership_service.add_membership(user2.identity_id, org.id,
         )
 
-        membership1 = core.add_membership(
-            user1.identity_id,
-            org.id,
-        )
-        core.add_membership(
-            user2.identity_id,
-            org.id,
-        )
-
-        role = core.create_role(
+        role = core.role_service.create_role(
             org.id,
             "direct_limited_role",
             "Direct Limited Role",
         )
-        core.assign_role(membership1.id, role.id)
+        core.role_service.assign_role(membership1.id, role.id)
 
         communications = core.communications_service
 
@@ -663,10 +661,10 @@ def test_direct_channel_permission_enforcement(tmp_path):
                 user2.identity_id,
             )
 
-        permission = core.get_permission_by_code(
+        permission = core.role_service.get_permission_by_code(
             "communications.channel.create"
         )
-        core.grant_permission(role.id, permission.id)
+        core.role_service.grant_permission(role.id, permission.id)
 
         channel = communications.create_direct_channel(
             user1.identity_id,
@@ -693,7 +691,7 @@ def test_direct_channel_creation_creates_audit_event(tmp_path):
             user2.identity_id,
         )
 
-        events = core.list_audit_events(
+        events = core.audit_service.list(
             organisation_id=org.id,
             limit=100,
         )
@@ -725,13 +723,9 @@ def test_direct_channel_cannot_cross_tenant_via_channel_access(tmp_path):
             user2.identity_id,
         )
 
-        org2 = core.create_organisation("C2", "Other Company")
-        user3 = core.create_user(
-            "u3",
-            "User 3",
-            "Correct-Horse-Battery",
-        )
-        core.add_membership(user3.identity_id, org2.id)
+        org2 = core.organisation_service.create_organisation(code="C2", name="Other Company")
+        user3 = core.user_service.create_user(username="u3", display_name="User 3", password="Correct-Horse-Battery")
+        core.company_membership_service.add_membership(user3.identity_id, org2.id)
 
         with pytest.raises(AuthorizationError):
             communications.get_channel(
@@ -748,12 +742,8 @@ def test_group_channel_creation_and_membership(tmp_path):
         communications = core.communications_service
         org, user1, user2 = setup_company(core)
 
-        user3 = core.create_user(
-            "u3",
-            "User 3",
-            "Correct-Horse-Battery",
-        )
-        core.add_membership(user3.identity_id, org.id)
+        user3 = core.user_service.create_user(username="u3", display_name="User 3", password="Correct-Horse-Battery")
+        core.company_membership_service.add_membership(user3.identity_id, org.id)
 
         channel = communications.create_group_channel(
             user1.identity_id,
@@ -836,18 +826,12 @@ def test_group_channel_rejects_cross_tenant_members(tmp_path):
         communications = core.communications_service
         org1, user1, user2 = setup_company(core)
 
-        org2 = core.create_organisation(
+        org2 = core.organisation_service.create_organisation(
             "C2",
             "Other Company",
         )
-        user3 = core.create_user(
-            "u3",
-            "User 3",
-            "Correct-Horse-Battery",
-        )
-        core.add_membership(
-            user3.identity_id,
-            org2.id,
+        user3 = core.user_service.create_user(username="u3", display_name="User 3", password="Correct-Horse-Battery")
+        core.company_membership_service.add_membership(user3.identity_id, org2.id,
         )
 
         with pytest.raises(AuthorizationError):
@@ -904,37 +888,25 @@ def test_group_channel_permission_enforcement(tmp_path):
     db, core = make_service(tmp_path)
 
     try:
-        org = core.create_organisation(
+        org = core.organisation_service.create_organisation(
             "C1",
             "Company",
         )
 
-        user1 = core.create_user(
-            "u1",
-            "User 1",
-            "Correct-Horse-Battery",
+        user1 = core.user_service.create_user(username="u1", display_name="User 1", password="Correct-Horse-Battery")
+        user2 = core.user_service.create_user(username="u2", display_name="User 2", password="Correct-Horse-Battery")
+
+        membership1 = core.company_membership_service.add_membership(user1.identity_id, org.id,
         )
-        user2 = core.create_user(
-            "u2",
-            "User 2",
-            "Correct-Horse-Battery",
+        core.company_membership_service.add_membership(user2.identity_id, org.id,
         )
 
-        membership1 = core.add_membership(
-            user1.identity_id,
-            org.id,
-        )
-        core.add_membership(
-            user2.identity_id,
-            org.id,
-        )
-
-        role = core.create_role(
+        role = core.role_service.create_role(
             org.id,
             "group_limited_role",
             "Group Limited Role",
         )
-        core.assign_role(
+        core.role_service.assign_role(
             membership1.id,
             role.id,
         )
@@ -949,10 +921,10 @@ def test_group_channel_permission_enforcement(tmp_path):
                 [user2.identity_id],
             )
 
-        permission = core.get_permission_by_code(
+        permission = core.role_service.get_permission_by_code(
             "communications.channel.create"
         )
-        core.grant_permission(
+        core.role_service.grant_permission(
             role.id,
             permission.id,
         )
@@ -984,7 +956,7 @@ def test_group_channel_creation_creates_audit_event(tmp_path):
             [user2.identity_id],
         )
 
-        events = core.list_audit_events(
+        events = core.audit_service.list(
             organisation_id=org.id,
             limit=100,
         )
@@ -1017,18 +989,12 @@ def test_group_channel_is_tenant_isolated(tmp_path):
             [user2.identity_id],
         )
 
-        org2 = core.create_organisation(
+        org2 = core.organisation_service.create_organisation(
             "C2",
             "Other Company",
         )
-        user3 = core.create_user(
-            "u3",
-            "User 3",
-            "Correct-Horse-Battery",
-        )
-        core.add_membership(
-            user3.identity_id,
-            org2.id,
+        user3 = core.user_service.create_user(username="u3", display_name="User 3", password="Correct-Horse-Battery")
+        core.company_membership_service.add_membership(user3.identity_id, org2.id,
         )
 
         with pytest.raises(AuthorizationError):

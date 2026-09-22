@@ -8,6 +8,7 @@ from phoenix_core.audit.domain import AuditEvent
 from phoenix_core.auth.service import AuthenticationService
 from phoenix_core.authorization.service import AuthorizationService
 from phoenix_core.configuration.service import ConfigurationService
+from phoenix_core.communications.service import CommunicationsService
 from phoenix_core.audit.service import AuditService
 from phoenix_core.errors import AuthorizationError
 from phoenix_core.legal_compliance import LegalComplianceService
@@ -36,6 +37,11 @@ class CoreApi:
         self.authorization_service = AuthorizationService(
             db,
             self.entitlement_service,
+        )
+        self.communications_service = CommunicationsService(
+            db,
+            authorize=self.authorization_service.authorize,
+            audit_record=self.audit_service.record,
         )
         self.company_membership_service = CompanyMembershipApplicationService(self)
         self.context_resolver = RequestContextResolver(

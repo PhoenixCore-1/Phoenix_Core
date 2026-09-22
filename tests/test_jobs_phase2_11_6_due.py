@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import pytest
@@ -7,14 +7,14 @@ from phoenix_core.errors import ValidationError
 from phoenix_core.infrastructure import SQLiteDatabase
 from phoenix_core.jobs.contracts import JobRequest
 from phoenix_core.jobs.service import JobService
-from phoenix_core.services import CoreFoundationService
+from phoenix_core.api.application import CoreApi
 
 
 def make_service(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
 
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
+    core = CoreApi(db)
 
     return db, JobService(db)
 
@@ -121,12 +121,12 @@ def test_get_due_jobs_only_returns_queued_jobs(tmp_path):
 
 def test_get_due_jobs_filters_by_organisation(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
+    core = CoreApi(db)
     service = JobService(db)
 
-    organisation_a = core.create_organisation("ORG-A", "Organisation A")
-    organisation_b = core.create_organisation("ORG-B", "Organisation B")
+    organisation_a = core.organisation_service.create_organisation(code="ORG-A", name="Organisation A")
+    organisation_b = core.organisation_service.create_organisation(code="ORG-B", name="Organisation B")
 
     job_a = service.enqueue(
         JobRequest(

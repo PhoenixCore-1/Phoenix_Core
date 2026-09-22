@@ -15,10 +15,9 @@ from phoenix_core.security.context import RequestContext
 class JobSecurityService:
     """Validate background-job execution against current Core authority."""
 
-    def __init__(self, db, core_service):
+    def __init__(self, db, authorization_service):
         self.db = db
-        self.core_service = core_service
-        self.authorization_service = AuthorizationService(db)
+        self.authorization_service = authorization_service
         self.identity_service = IdentityService(db)
         self.organisation_service = OrganisationService(db)
         self.module_service = ModuleService(db)
@@ -117,4 +116,3 @@ class JobSecurityService:
                 raise AuthorizationError(
                     "Job module entitlement is not active."
                 )
-

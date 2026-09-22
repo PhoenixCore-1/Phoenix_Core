@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -8,7 +8,7 @@ from phoenix_core.jobs.contracts import JobExecutor, JobRequest
 from phoenix_core.jobs.registry import JobExecutorRegistry
 from phoenix_core.jobs.service import JobService
 from phoenix_core.jobs.worker import JobWorker, WorkerResult
-from phoenix_core.services import CoreFoundationService
+from phoenix_core.api.application import CoreApi
 
 
 class TestExecutor(JobExecutor):
@@ -27,8 +27,8 @@ class FailingExecutor(JobExecutor):
 def make_services(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
 
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
+    core = CoreApi(db)
 
     job_service = JobService(db)
     registry = JobExecutorRegistry()

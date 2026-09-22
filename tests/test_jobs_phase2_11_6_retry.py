@@ -1,17 +1,17 @@
-﻿import pytest
+import pytest
 
 from phoenix_core.errors import ConflictError
 from phoenix_core.infrastructure import SQLiteDatabase
 from phoenix_core.jobs.contracts import JobRequest
 from phoenix_core.jobs.service import JobService
-from phoenix_core.services import CoreFoundationService
+from phoenix_core.api.application import CoreApi
 
 
 def make_service(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "test.db"))
 
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
+    core = CoreApi(db)
 
     return db, JobService(db)
 

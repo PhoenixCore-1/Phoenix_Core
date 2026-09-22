@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -8,13 +8,11 @@ from phoenix_core.documents.infrastructure.local_storage import LocalDocumentSto
 from phoenix_core.documents.service import DocumentService
 from phoenix_core.errors import NotFoundError, ValidationError
 from phoenix_core.infrastructure import SQLiteDatabase
-from phoenix_core.services import CoreFoundationService
 
 
 def build_service(tmp_path: Path):
     db = SQLiteDatabase(":memory:")
-    core = CoreFoundationService(db)
-    core.initialise()
+    db.initialise_schema()
 
     organisation_id = uuid4()
     identity_id = uuid4()

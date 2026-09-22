@@ -1,4 +1,4 @@
-﻿from uuid import uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -10,17 +10,16 @@ from phoenix_core.errors import ValidationError
 
 def make_service(tmp_path):
     from phoenix_core.infrastructure import SQLiteDatabase
-    from phoenix_core.services import CoreFoundationService
 
     db = SQLiteDatabase(str(tmp_path / "integration.db"))
-    service = CoreFoundationService(db)
-    service.initialise()
+    service = CoreApi(db)
+    db.initialise_schema()
     return db, service
 
 
 def test_integration_requires_request_id(tmp_path):
     db, service = make_service(tmp_path)
-    integration = CoreIntegrationService(CoreApi(db, service))
+    integration = CoreIntegrationService(CoreApi(db))
 
     with pytest.raises(ValidationError, match="request_id is required"):
         integration.handle(
@@ -35,7 +34,7 @@ def test_integration_requires_request_id(tmp_path):
 
 def test_integration_requires_operation(tmp_path):
     db, service = make_service(tmp_path)
-    integration = CoreIntegrationService(CoreApi(db, service))
+    integration = CoreIntegrationService(CoreApi(db))
 
     with pytest.raises(ValidationError, match="operation is required"):
         integration.handle(
@@ -50,7 +49,7 @@ def test_integration_requires_operation(tmp_path):
 
 def test_integration_rejects_unsupported_operation(tmp_path):
     db, service = make_service(tmp_path)
-    integration = CoreIntegrationService(CoreApi(db, service))
+    integration = CoreIntegrationService(CoreApi(db))
 
     with pytest.raises(ValidationError, match="Unsupported integration operation"):
         integration.handle(
@@ -65,7 +64,7 @@ def test_integration_rejects_unsupported_operation(tmp_path):
 
 def test_identity_current_requires_authenticated_session(tmp_path):
     db, service = make_service(tmp_path)
-    integration = CoreIntegrationService(CoreApi(db, service))
+    integration = CoreIntegrationService(CoreApi(db))
 
     with pytest.raises(ValidationError, match="authenticated session"):
         integration.handle(
@@ -81,7 +80,7 @@ def test_identity_current_requires_authenticated_session(tmp_path):
 
 def test_identity_current_requires_organisation_context(tmp_path):
     db, service = make_service(tmp_path)
-    integration = CoreIntegrationService(CoreApi(db, service))
+    integration = CoreIntegrationService(CoreApi(db))
 
     with pytest.raises(ValidationError, match="organisation context"):
         integration.handle(

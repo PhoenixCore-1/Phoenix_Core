@@ -135,6 +135,41 @@ class RoleService:
             datetime.fromisoformat(row["created_at"]),
         )
 
+    def list_roles(
+        self,
+        organisation_id: UUID,
+        *,
+        status: str | None = None,
+    ) -> list[Role]:
+        sql = """
+            SELECT id,organisation_id,code,name,scope,status,created_at
+            FROM roles
+            WHERE organisation_id=?
+        """
+        params: list[str] = [str(organisation_id)]
+
+        if status is not None:
+            if status not in {"ACTIVE", "DISABLED"}:
+                raise ValidationError("Invalid role status.")
+            sql += " AND status=?"
+            params.append(status)
+
+        sql += " ORDER BY code"
+
+        rows = self.db.execute(sql, params).fetchall()
+
+        return [
+            Role(
+                UUID(row["id"]),
+                UUID(row["organisation_id"]),
+                row["code"],
+                row["name"],
+                row["scope"],
+                row["status"],
+                datetime.fromisoformat(row["created_at"]),
+            )
+            for row in rows
+        ]
     def update_role(
         self,
         role_id: UUID,
@@ -176,6 +211,11 @@ class RoleService:
 
         return updated
 
+    def disable_role(self, role_id: UUID) -> Role:
+        return self.set_role_status(role_id, "DISABLED")
+
+    def enable_role(self, role_id: UUID) -> Role:
+        return self.set_role_status(role_id, "ACTIVE")
     def create_permission(self, code: str, name: str) -> Permission:
         permission = Permission.create(code, name)
 
@@ -245,6 +285,54 @@ class RoleService:
             row["name"],
             datetime.fromisoformat(row["created_at"]),
         )
+    def list_permissions(self) -> list[Permission]:
+        rows = self.db.execute(
+            """
+            SELECT id,code,name,created_at
+            FROM permissions
+            ORDER BY code
+            """
+        ).fetchall()
+
+        return [
+            Permission(
+                UUID(row["id"]),
+                row["code"],
+                row["name"],
+                datetime.fromisoformat(row["created_at"]),
+            )
+            for row in rows
+        ]
+
+    def update_permission(
+        self,
+        permission_id: UUID,
+        *,
+        code: str | None = None,
+        name: str | None = None,
+    ) -> Permission:
+        current = self.get_permission(permission_id)
+        updated = current.with_details(code=code, name=name)
+
+        try:
+            self.db.execute(
+                "UPDATE permissions SET code=?,name=? WHERE id=?",
+                (
+                    updated.code,
+                    updated.name,
+                    str(permission_id),
+                ),
+            )
+            self.db.commit()
+        except Exception as exc:
+            self.db.rollback()
+            if "UNIQUE" in str(exc).upper():
+                raise ConflictError(
+                    "Permission code already exists."
+                ) from exc
+            raise
+
+        return updated
     def grant_permission(
         self,
         role_id: UUID,
@@ -295,6 +383,32 @@ class RoleService:
 
         return cur.rowcount == 1
 
+    def list_role_permissions(
+        self,
+        role_id: UUID,
+    ) -> list[Permission]:
+        self.get_role(role_id)
+
+        rows = self.db.execute(
+            """
+            SELECT p.id,p.code,p.name,p.created_at
+            FROM role_permissions rp
+            JOIN permissions p ON p.id=rp.permission_id
+            WHERE rp.role_id=?
+            ORDER BY p.code
+            """,
+            (str(role_id),),
+        ).fetchall()
+
+        return [
+            Permission(
+                UUID(row["id"]),
+                row["code"],
+                row["name"],
+                datetime.fromisoformat(row["created_at"]),
+            )
+            for row in rows
+        ]
     def remove_role(
         self,
         membership_id: UUID,
@@ -312,4 +426,3 @@ class RoleService:
         self.db.commit()
 
         return cur.rowcount == 1
-

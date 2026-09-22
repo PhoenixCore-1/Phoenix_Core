@@ -5,63 +5,123 @@ import pytest
 from phoenix_core.errors import ConflictError, NotFoundError, ValidationError
 
 
-def make_service(tmp_path):
+def make_services(tmp_path):
+    from phoenix_core.api.application import CoreApi
     from phoenix_core.infrastructure import SQLiteDatabase
-    from phoenix_core.services import CoreFoundationService
+
     db = SQLiteDatabase(tmp_path / "test.db")
-    service = CoreFoundationService(db)
-    service.initialise()
-    return db, service
+    db.initialise_schema()
+    api = CoreApi(db)
+
+    return (
+        db,
+        api.user_service,
+        api.identity_service,
+        api.authentication_service,
+        api.organisation_service,
+        api.company_membership_service,
+    )
+
+
+def create_test_user(users, username="alice", display_name="Alice"):
+    return users.create_user(
+        username=username,
+        display_name=display_name,
+        password="StrongPass123!",
+    )
+
+
+def create_authenticated_user(users, organisations, memberships, username="alice"):
+    user = create_test_user(users, username)
+    organisation = organisations.create_organisation(
+        f"{username.upper()}ORG",
+        f"{username.title()} Organisation",
+    )
+    memberships.add_membership(user.identity_id, organisation.id)
+    return user, organisation
 
 
 def test_user_can_be_read_and_updated(tmp_path):
-    db, service = make_service(tmp_path)
-    user = service.create_user("alice", "Alice Smith", "StrongPass123!")
-    loaded = service.get_user(user.id)
+    db, users, identities, authentication, organisations, memberships = make_services(tmp_path)
+    user = create_test_user(users, "alice", "Alice Smith")
+    loaded = users.get_user(user.id)
+
     assert loaded.identity_id == user.identity_id
     assert loaded.display_name == "Alice Smith"
-    updated = service.update_user(user.id, display_name="Alice Jones")
+
+    updated = users.update_user(user.id, display_name="Alice Jones")
+
     assert updated.display_name == "Alice Jones"
     assert updated.username == "alice"
     db.close()
 
 
 def test_user_username_change_respects_uniqueness(tmp_path):
-    db, service = make_service(tmp_path)
-    first = service.create_user("alice", "Alice", "StrongPass123!")
-    service.create_user("bob", "Bob", "StrongPass123!")
+    db, users, identities, authentication, organisations, memberships = make_services(tmp_path)
+    first = create_test_user(users, "alice", "Alice")
+    create_test_user(users, "bob", "Bob")
+
     with pytest.raises(ConflictError):
-        service.update_user(first.id, username="bob")
+        users.update_user(first.id, username="bob")
+
     db.close()
 
 
 def test_user_lifecycle_syncs_identity_and_revokes_sessions(tmp_path):
-    db, service = make_service(tmp_path)
-    user = service.create_user("alice", "Alice", "StrongPass123!")
-    session, token = service.authenticate("alice", "StrongPass123!")
-    service.suspend_user(user.id)
-    assert service.get_user(user.id).status == "SUSPENDED"
-    assert service.get_identity(user.identity_id).status == "SUSPENDED"
-    row = db.execute("SELECT status FROM sessions WHERE id=?", (str(session.id),)).fetchone()
+    db, users, identities, authentication, organisations, memberships = make_services(tmp_path)
+    user, organisation = create_authenticated_user(
+        users,
+        organisations,
+        memberships,
+        "alice",
+    )
+
+    session, token = authentication.authenticate(
+        user.username,
+        "StrongPass123!",
+        organisation.id,
+    )
+
+    users.suspend_user(user.id)
+
+    assert users.get_user(user.id).status == "SUSPENDED"
+    assert identities.get_identity(user.identity_id).status == "SUSPENDED"
+
+    row = db.execute(
+        "SELECT status FROM sessions WHERE id=?",
+        (str(session.id),),
+    ).fetchone()
+
     assert row["status"] == "REVOKED"
+
     with pytest.raises(Exception):
-        service.authenticate("alice", "StrongPass123!")
-    service.reactivate_user(user.id)
-    assert service.get_user(user.id).status == "ACTIVE"
-    assert service.get_identity(user.identity_id).status == "ACTIVE"
+        authentication.authenticate(
+            user.username,
+            "StrongPass123!",
+            organisation.id,
+        )
+
+    users.reactivate_user(user.id)
+
+    assert users.get_user(user.id).status == "ACTIVE"
+    assert identities.get_identity(user.identity_id).status == "ACTIVE"
     db.close()
 
 
 def test_missing_user_is_rejected(tmp_path):
-    db, service = make_service(tmp_path)
+    db, users, identities, authentication, organisations, memberships = make_services(tmp_path)
+
     with pytest.raises(NotFoundError):
-        service.get_user(UUID("00000000-0000-0000-0000-000000000000"))
+        users.get_user(UUID("00000000-0000-0000-0000-000000000000"))
+
     db.close()
 
 
 def test_blank_user_update_is_rejected(tmp_path):
-    db, service = make_service(tmp_path)
-    user = service.create_user("alice", "Alice", "StrongPass123!")
+    db, users, identities, authentication, organisations, memberships = make_services(tmp_path)
+    user = create_test_user(users)
+
     with pytest.raises(ValidationError):
-        service.update_user(user.id, display_name="   ")
+        users.update_user(user.id, display_name="   ")
+
     db.close()

@@ -1,4 +1,4 @@
-﻿"""Phase 2.11.7 background-job audit integration tests."""
+"""Phase 2.11.7 background-job audit integration tests."""
 
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -7,28 +7,28 @@ import pytest
 
 from phoenix_core.audit.service import AuditService
 from phoenix_core.infrastructure import SQLiteDatabase
+from phoenix_core.api.application import CoreApi
 from phoenix_core.jobs.contracts import JobRequest
 from phoenix_core.jobs.service import JobService
-from phoenix_core.services import CoreFoundationService
+
 
 
 def make_services(tmp_path):
     db = SQLiteDatabase(str(tmp_path / "phoenix.db"))
-    core = CoreFoundationService(db)
-    core.initialise()
+    core = CoreApi(db)
+    db.initialise_schema()
 
     audit = AuditService(db)
     jobs = JobService(db, audit_service=audit)
 
     return db, core, jobs, audit
 
-
 def test_enqueue_records_audit_event(tmp_path):
     db, core, jobs, audit = make_services(tmp_path)
 
-    organisation = core.create_organisation("ACME", "Acme")
-    user = core.create_user("alice", "Alice", "StrongPass123!")
-    membership = core.add_membership(user.identity_id, organisation.id)
+    organisation = core.organisation_service.create_organisation("ACME", "Acme")
+    user = core.user_service.create_user(username="alice", display_name="Alice", password="StrongPass123!")
+    membership = core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -81,9 +81,9 @@ def test_system_job_audit_has_no_tenant_or_identity(tmp_path):
 def test_claim_records_audit_event(tmp_path):
     db, core, jobs, audit = make_services(tmp_path)
 
-    organisation = core.create_organisation("ACME", "Acme")
-    user = core.create_user("alice", "Alice", "StrongPass123!")
-    core.add_membership(user.identity_id, organisation.id)
+    organisation = core.organisation_service.create_organisation("ACME", "Acme")
+    user = core.user_service.create_user(username="alice", display_name="Alice", password="StrongPass123!")
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -113,9 +113,9 @@ def test_claim_records_audit_event(tmp_path):
 def test_complete_records_audit_event(tmp_path):
     db, core, jobs, audit = make_services(tmp_path)
 
-    organisation = core.create_organisation("ACME", "Acme")
-    user = core.create_user("alice", "Alice", "StrongPass123!")
-    core.add_membership(user.identity_id, organisation.id)
+    organisation = core.organisation_service.create_organisation("ACME", "Acme")
+    user = core.user_service.create_user(username="alice", display_name="Alice", password="StrongPass123!")
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -147,9 +147,9 @@ def test_complete_records_audit_event(tmp_path):
 def test_fail_records_audit_event(tmp_path):
     db, core, jobs, audit = make_services(tmp_path)
 
-    organisation = core.create_organisation("ACME", "Acme")
-    user = core.create_user("alice", "Alice", "StrongPass123!")
-    core.add_membership(user.identity_id, organisation.id)
+    organisation = core.organisation_service.create_organisation("ACME", "Acme")
+    user = core.user_service.create_user(username="alice", display_name="Alice", password="StrongPass123!")
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(
@@ -181,9 +181,9 @@ def test_fail_records_audit_event(tmp_path):
 def test_retry_records_audit_event(tmp_path):
     db, core, jobs, audit = make_services(tmp_path)
 
-    organisation = core.create_organisation("ACME", "Acme")
-    user = core.create_user("alice", "Alice", "StrongPass123!")
-    core.add_membership(user.identity_id, organisation.id)
+    organisation = core.organisation_service.create_organisation("ACME", "Acme")
+    user = core.user_service.create_user(username="alice", display_name="Alice", password="StrongPass123!")
+    core.company_membership_service.add_membership(user.identity_id, organisation.id)
 
     job = jobs.enqueue(
         JobRequest(

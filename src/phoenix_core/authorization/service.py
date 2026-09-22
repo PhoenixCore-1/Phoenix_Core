@@ -4,8 +4,9 @@ from uuid import UUID
 class AuthorizationService:
     """Core Shared authorization and effective-permission resolution."""
 
-    def __init__(self, db):
+    def __init__(self, db, entitlement_service):
         self.db = db
+        self.entitlement_service = entitlement_service
 
     def effective_permissions(
         self,
@@ -30,6 +31,25 @@ class AuthorizationService:
         ).fetchall()
 
         return {row["code"] for row in rows}
+
+    def has_capability(
+        self,
+        identity_id: UUID,
+        organisation_id: UUID,
+        permission: str,
+        module_id: UUID,
+    ) -> bool:
+        if not self.entitlement_service.is_module_available(
+            organisation_id,
+            module_id,
+        ):
+            return False
+
+        return self.authorize(
+            identity_id,
+            organisation_id,
+            permission,
+        )
 
     def authorize(
         self,

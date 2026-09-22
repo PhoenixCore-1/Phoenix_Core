@@ -4,6 +4,7 @@ from uuid import UUID
 
 from phoenix_core.errors import AuthenticationError, AuthorizationError
 from phoenix_core.authorization.service import AuthorizationService
+from phoenix_core.licensing.service import EntitlementService
 from phoenix_core.security.context import RequestContext
 from phoenix_core.sessions.service import SessionService
 
@@ -11,9 +12,12 @@ from phoenix_core.sessions.service import SessionService
 class RequestContextResolver:
     """Resolve an authenticated API request into authoritative Core context."""
 
-    def __init__(self, db):
+    def __init__(self, db, entitlement_service):
         self.db = db
-        self.authorization_service = AuthorizationService(db)
+        self.authorization_service = AuthorizationService(
+            db,
+            entitlement_service,
+        )
         self.session_service = SessionService(db)
 
     def resolve(

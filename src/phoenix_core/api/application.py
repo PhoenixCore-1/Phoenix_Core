@@ -15,6 +15,7 @@ from phoenix_core.ip import IPOwnershipService
 from phoenix_core.users.application import UserApplicationService
 from phoenix_core.identity.service import IdentityService
 from phoenix_core.licensing.service import EntitlementService
+from phoenix_core.modules.service import ModuleService
 from phoenix_company.application.memberships import CompanyMembershipApplicationService
 from phoenix_core.organisations.service import OrganisationService
 from phoenix_system.application.companies import SystemCompanyApplicationService
@@ -27,13 +28,20 @@ class CoreApi:
     def __init__(self, db):
         self.db = db
         self.authentication_service = AuthenticationService(db)
-        self.authorization_service = AuthorizationService(db)
         self.configuration_service = ConfigurationService(db)
         self.role_service = RoleService(db)
         self.audit_service = AuditService(db)
+        self.module_service = ModuleService(db)
         self.entitlement_service = EntitlementService(db)
+        self.authorization_service = AuthorizationService(
+            db,
+            self.entitlement_service,
+        )
         self.company_membership_service = CompanyMembershipApplicationService(self)
-        self.context_resolver = RequestContextResolver(db)
+        self.context_resolver = RequestContextResolver(
+            db,
+            self.entitlement_service,
+        )
         self.legal_compliance_service = LegalComplianceService(db)
         self.ip_ownership_service = IPOwnershipService(self.db)
         self.user_service = UserApplicationService(self)

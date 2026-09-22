@@ -325,7 +325,7 @@ function Login({
             Phoenix Core Platform V1.0.0
           </span>
 
-          <b>•</b>
+          <b>ï¿½</b>
 
           <span>
             Secure access
@@ -1075,7 +1075,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                ×
+                ï¿½
               </button>
             </div>
 
@@ -1254,10 +1254,10 @@ function SystemHome({
           moduleData,
         ] = await Promise.all([
           api(
-            '/api/v1/baseline/companies',
+            '/api/v1/system/companies',
           ),
           api(
-            '/api/v1/baseline/modules',
+            '/api/v1/system/modules',
           ),
         ])
 
@@ -1340,7 +1340,7 @@ function SystemHome({
         <KpiCard
           value={
             loading
-              ? '—'
+              ? 'ï¿½'
               : totalCompanies
           }
           label="Total Companies"
@@ -1358,7 +1358,7 @@ function SystemHome({
         <KpiCard
           value={
             loading
-              ? '—'
+              ? 'ï¿½'
               : activeCompanies
           }
           label="Active Companies"
@@ -1374,7 +1374,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="ï¿½"
           label="System Users"
           secondary="Data will be connected"
           onClick={() =>
@@ -1387,7 +1387,7 @@ function SystemHome({
         <KpiCard
           value={
             loading
-              ? '—'
+              ? 'ï¿½'
               : activeBusinessModules
           }
           label="Active Business Modules"
@@ -1405,7 +1405,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="ï¿½"
           label="Companies on Trial"
           secondary="Trial data will be connected"
           onClick={() =>
@@ -1416,7 +1416,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="ï¿½"
           label="Active Licences"
           secondary="Licence data will be connected"
           onClick={() =>
@@ -1427,7 +1427,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="ï¿½"
           label="Pending Quotes"
           secondary="Quote data will be connected"
           onClick={() =>
@@ -1436,7 +1436,7 @@ function SystemHome({
         />
 
         <KpiCard
-          value="—"
+          value="ï¿½"
           label="Notifications"
           secondary="Notification data will be connected"
           onClick={() =>
@@ -1482,7 +1482,7 @@ function SystemHome({
 
             <strong>
               {loading
-                ? '—'
+                ? 'ï¿½'
                 : `${activeBusinessModules} active`}
             </strong>
           </div>
@@ -1628,7 +1628,7 @@ function SystemCompanies() {
 
   const loadCompanies = async () => {
     const data =
-      await api('/api/v1/baseline/companies')
+      await api('/api/v1/system/companies')
 
     setCompanies(data.items || [])
   }
@@ -1638,7 +1638,7 @@ function SystemCompanies() {
   ) => {
     const data =
       await api(
-        `/api/v1/baseline/companies/${companyId}`,
+        `/api/v1/system/companies/${companyId}`,
       )
 
     setCompanyDetail(data)
@@ -1669,7 +1669,7 @@ function SystemCompanies() {
 
     try {
       await api(
-        '/api/v1/baseline/companies',
+        '/api/v1/system/companies',
         {
           method: 'POST',
           body: JSON.stringify({
@@ -1699,7 +1699,7 @@ function SystemCompanies() {
   ) => {
     try {
       await api(
-        `/api/v1/baseline/companies/${companyId}/${action}`,
+        `/api/v1/system/companies/${companyId}/${action}`,
         {
           method: 'POST',
         },
@@ -1730,7 +1730,7 @@ function SystemCompanies() {
   ) => {
     try {
       await api(
-        `/api/v1/baseline/companies/${companyId}/modules/${moduleCode}/${action}`,
+        `/api/v1/system/companies/${companyId}/modules/${moduleCode}/${action}`,
         {
           method: 'POST',
         },
@@ -2169,7 +2169,7 @@ function CompanyShell({
               setView('home')
             }
           >
-            <span className="company-nav-icon">¦</span>
+            <span className="company-nav-icon">ï¿½</span>
             Home
           </button>
 
@@ -2296,7 +2296,7 @@ function CompanyShell({
                         setNotificationsOpen(false)
                       }
                     >
-                      ×
+                      ï¿½
                     </button>
                   </div>
 
@@ -2569,7 +2569,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} · v{module.version}
+                      {module.code} ï¿½ v{module.version}
                     </span>
                   </div>
 
@@ -3076,7 +3076,7 @@ function CompanyUsers() {
                   setShowAdd(false)
                 }
               >
-                ×
+                ï¿½
               </button>
             </div>
 

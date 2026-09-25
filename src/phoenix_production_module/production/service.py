@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
@@ -39,6 +39,8 @@ from .models import (
     MaterialRequirement,
 )
 from .state_machine import TransitionResult
+from .performance_analytics import ProductionPerformance
+from .core_adapter import calculate_core_performance
 
 
 class RateConfidence(str, Enum):
@@ -69,6 +71,31 @@ class RateSelection:
 
 
 class ProductionService:
+    # ============================================================
+    # WP5 PERFORMANCE ANALYTICS
+    # ============================================================
+
+    def calculate_performance(
+        self,
+        db,
+        *,
+        organisation_id: int,
+        start_at: Optional[datetime] = None,
+        end_at: Optional[datetime] = None,
+    ) -> ProductionPerformance:
+        """
+        Calculate tenant-scoped Production Performance from Core.
+
+        Core persistence is delegated to core_adapter; the analytics
+        algorithm remains a pure domain calculation.
+        """
+
+        return calculate_core_performance(
+            db,
+            organisation_id=organisation_id,
+            start_at=start_at,
+            end_at=end_at,
+        )
     """
     Application service for the Phoenix Production module.
 
@@ -1627,3 +1654,5 @@ class ProductionService:
         order: ManufacturingOrder,
     ) -> ETAStatus:
         return order.eta.status
+
+

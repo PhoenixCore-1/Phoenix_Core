@@ -218,17 +218,21 @@ class RequiredDateRiskCalculator:
             required_date is not None
             and required_date.tzinfo is None
         ):
-            required_date = required_date.replace(
+            normalized_required_date = required_date.replace(
                 tzinfo=timezone.utc
             )
+        else:
+            normalized_required_date = required_date
 
         if (
             current_eta is not None
             and current_eta.tzinfo is None
         ):
-            current_eta = current_eta.replace(
+            normalized_current_eta = current_eta.replace(
                 tzinfo=timezone.utc
             )
+        else:
+            normalized_current_eta = current_eta
 
         if (
             required_date is None

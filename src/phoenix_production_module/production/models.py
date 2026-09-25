@@ -668,8 +668,11 @@ class ETAPlan:
             )
 
         self.actual_completion = completed_at
-        # Preserve the last calculated current ETA as the final ETA.
-        # Actual completion is stored separately above.
+
+        # Once production is complete, the live/current ETA is the
+        # actual completion timestamp.
+        self.current_eta = completed_at
+
         self.last_calculated_at = completed_at
         self.status = ETAStatus.COMPLETED
 

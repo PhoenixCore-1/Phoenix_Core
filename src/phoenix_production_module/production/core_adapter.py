@@ -3,6 +3,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 
+from .performance_analytics import (
+    ProductionObservation,
+    ProductionPerformance,
+    calculate_performance,
+)
 
 QUANTITY_TYPES = {
     "ACCEPTED",
@@ -132,3 +137,127 @@ def record_quantity(
     return int(cur.lastrowid)
 
 
+
+
+def _parse_core_datetime(value) -> Optional[datetime]:
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        parsed = datetime.fromisoformat(
+            str(value).replace("Z", "+00:00")
+        )
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed
+
+
+def load_performance_observations(
+    db,
+    *,
+    organisation_id: str,
+) -> list[ProductionObservation]:
+    """
+    Build Production Performance observations from the
+    authoritative Phoenix Core production schema.
+
+    Planned quantity:
+        production_orders.quantity_ordered
+
+    Actual quantity:
+        accepted + rejected + rework quantity ledger entries
+
+    Production timing:
+        stage start/finish timestamps.
+    """
+
+    orders = db.execute(
+        """
+        SELECT
+            production_order_id,
+            organisation_id,
+            quantity_ordered,
+            status
+        FROM production_orders
+        WHERE organisation_id=?
+        ORDER BY production_order_id
+        """,
+        (str(organisation_id),),
+    ).fetchall()
+
+    observations = []
+
+    for order in orders:
+        order_id = int(order[0])
+        org_id = str(order[1])
+        planned_quantity = Decimal(str(order[2]))
+
+        quantity_row = db.execute(
+            """
+            SELECT COALESCE(SUM(quantity), 0)
+            FROM production_quantity_ledger
+            WHERE organisation_id=?
+              AND production_order_id=?
+              AND quantity_type IN (
+                  'ACCEPTED',
+                  'REJECTED',
+                  'REWORK'
+              )
+            """,
+            (org_id, order_id),
+        ).fetchone()
+
+        actual_quantity = Decimal(
+            str(quantity_row[0] or "0")
+        )
+
+        timing = db.execute(
+            """
+            SELECT
+                MIN(start_datetime),
+                MAX(finish_datetime)
+            FROM production_stages
+            WHERE production_order_id=?
+            """,
+            (order_id,),
+        ).fetchone()
+
+        started_at = _parse_core_datetime(timing[0])
+        completed_at = _parse_core_datetime(timing[1])
+
+        observations.append(
+            ProductionObservation(
+                order_id=str(order_id),
+                organisation_id=org_id,
+                planned_quantity=planned_quantity,
+                actual_quantity=actual_quantity,
+                started_at=started_at,
+                completed_at=completed_at,
+            )
+        )
+
+    return observations
+
+
+def calculate_core_performance(
+    db,
+    *,
+    organisation_id: str,
+    start_at: Optional[datetime] = None,
+    end_at: Optional[datetime] = None,
+) -> ProductionPerformance:
+    observations = load_performance_observations(
+        db,
+        organisation_id=organisation_id,
+    )
+
+    return calculate_performance(
+        observations,
+        organisation_id=str(organisation_id),
+        start_at=start_at,
+        end_at=end_at,
+    )

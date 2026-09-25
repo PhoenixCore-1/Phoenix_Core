@@ -52,6 +52,8 @@ def record_quantity(
         raise ValueError("uom_code is required")
 
     # Confirm the order belongs to the supplied organisation.
+    # Confirm the order belongs to the supplied organisation.
+    # Confirm the order belongs to the supplied organisation.
     order = db.execute(
         """
         SELECT production_order_id
@@ -128,3 +130,5 @@ def record_quantity(
     )
 
     return int(cur.lastrowid)
+
+

@@ -133,6 +133,8 @@ def _load_eta_configuration() -> dict:
 
 def _configured_working_day_eta(
     start_at: datetime,
+    *,
+    configuration: Optional[dict] = None,
 ) -> datetime:
     """
     Calculate ETA from the Production Process Date.
@@ -143,7 +145,7 @@ def _configured_working_day_eta(
 
     from datetime import timedelta
 
-    config = _load_eta_configuration()
+    config = configuration if configuration is not None else _load_eta_configuration()
 
     lead_time = int(
         config.get(

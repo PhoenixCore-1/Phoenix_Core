@@ -35,7 +35,7 @@ def test_resolver_builds_authenticated_context(tmp_path):
     db, service = make_service(tmp_path)
     user, org, _ = setup_user(service, "contextuser")
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -61,7 +61,7 @@ def test_resolver_rejects_missing_organisation_context(tmp_path):
     db, service = make_service(tmp_path)
     user, org, _ = setup_user(service, "contextmissing")
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -87,7 +87,7 @@ def test_resolver_rejects_organisation_without_membership(tmp_path):
         name="Other Organisation",
     )
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -109,7 +109,7 @@ def test_resolver_rejects_revoked_session(tmp_path):
     db, service = make_service(tmp_path)
     user, org, _ = setup_user(service, "contextrevoked")
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -132,7 +132,7 @@ def test_resolver_rejects_inactive_identity_session(tmp_path):
     db, service = make_service(tmp_path)
     user, org, _ = setup_user(service, "contextinactive")
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -156,7 +156,7 @@ def test_resolver_rejects_suspended_membership(tmp_path):
     db, service = make_service(tmp_path)
     user, org, membership = setup_user(service, "contextmembership")
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )

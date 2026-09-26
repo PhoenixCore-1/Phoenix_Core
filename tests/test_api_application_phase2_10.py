@@ -56,7 +56,7 @@ def test_current_identity_endpoint_returns_api_response(tmp_path):
         system_company_service,
     )
 
-    session, token = authentication_service.authenticate(
+    session, token, _ = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -90,7 +90,7 @@ def test_current_identity_endpoint_enforces_tenant_boundary(tmp_path):
         name="Other Organisation",
     )
 
-    session, token = authentication_service.authenticate(
+    session, token, _ = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -273,7 +273,7 @@ def test_api_current_organisation_returns_current_tenant(tmp_path):
         system_company_service,
     )
 
-    session, token = authentication_service.authenticate(
+    session, token, _ = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -309,7 +309,7 @@ def test_api_current_organisation_rejects_other_tenant(tmp_path):
         name="Other Organisation",
     )
 
-    session, token = authentication_service.authenticate(
+    session, token, _ = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -336,7 +336,7 @@ def test_api_current_user_returns_authenticated_user_without_password_hash(tmp_p
         system_company_service,
     )
 
-    session, token = authentication_service.authenticate(
+    session, token, _ = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,
@@ -374,7 +374,7 @@ def test_api_current_user_rejects_other_tenant(tmp_path):
         name="Other Organisation",
     )
 
-    session, token = authentication_service.authenticate(
+    session, token, _ = authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,

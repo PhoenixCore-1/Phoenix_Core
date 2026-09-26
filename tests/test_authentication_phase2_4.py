@@ -30,7 +30,7 @@ def setup_user(organisations, users, memberships, username="authuser"):
 def test_authentication_creates_active_session(tmp_path):
     db, organisations, users, memberships = make_services(tmp_path)
     user, org, _ = setup_user(organisations, users, memberships)
-    session, token = AuthenticationService(db).authenticate(
+    session, token, _ = AuthenticationService(db).authenticate(
         user.username, "CorrectPassword123!", org.id
     )
     assert session.identity_id == user.identity_id
@@ -58,8 +58,8 @@ def test_session_revoke_and_revoke_all_work(tmp_path):
     db, organisations, users, memberships = make_services(tmp_path)
     user, org, _ = setup_user(organisations, users, memberships, "revoke")
     auth = AuthenticationService(db)
-    first, _ = auth.authenticate(user.username, "CorrectPassword123!", org.id)
-    second, _ = auth.authenticate(user.username, "CorrectPassword123!", org.id)
+    first, _, _ = auth.authenticate(user.username, "CorrectPassword123!", org.id)
+    second, _, _ = auth.authenticate(user.username, "CorrectPassword123!", org.id)
     assert SessionService(db).revoke(first.id)
     assert not SessionService(db).revoke(first.id)
     assert SessionService(db).revoke_all_for_identity(user.identity_id) == 1
@@ -92,7 +92,7 @@ def test_organisation_scoped_authentication_returns_identity_session(tmp_path):
     db, organisations, users, memberships = make_services(tmp_path)
     user, org, _ = setup_user(organisations, users, memberships, "orgscope")
 
-    session, token = AuthenticationService(db).authenticate(
+    session, token, _ = AuthenticationService(db).authenticate(
         user.username,
         "CorrectPassword123!",
         org.id,

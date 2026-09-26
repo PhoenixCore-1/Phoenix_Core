@@ -76,7 +76,7 @@ def test_user_lifecycle_syncs_identity_and_revokes_sessions(tmp_path):
         "alice",
     )
 
-    session, token = authentication.authenticate(
+    session, token, _ = authentication.authenticate(
         user.username,
         "StrongPass123!",
         organisation.id,

@@ -30,7 +30,7 @@ def test_api_rejects_revoked_session(tmp_path):
     db, service = make_service(tmp_path)
     user, org = setup_user(service)
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -61,7 +61,7 @@ def test_api_rejects_cross_tenant_context(tmp_path):
         name="Other Security Organisation",
     )
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -85,7 +85,7 @@ def test_api_rejects_missing_organisation_context(tmp_path):
     db, service = make_service(tmp_path)
     user, org = setup_user(service)
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -109,7 +109,7 @@ def test_api_permission_guard_denies_missing_permission(tmp_path):
     db, service = make_service(tmp_path)
     user, org = setup_user(service)
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -137,7 +137,7 @@ def test_api_entitlement_guard_denies_missing_entitlement(tmp_path):
     db, service = make_service(tmp_path)
     user, org = setup_user(service)
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )

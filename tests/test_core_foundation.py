@@ -57,7 +57,7 @@ def test_authentication_creates_session_and_revoke_works(tmp_path):
     service.organisation_service.create_organisation("ACME", "Acme Ltd")
     service.user_service.create_user(username="admin", display_name="Admin", password="Correct-Horse-Battery")
 
-    session, token = service.authentication_service.authenticate("admin", "Correct-Horse-Battery")
+    session, token, _ = service.authentication_service.authenticate("admin", "Correct-Horse-Battery")
     assert session.status == "ACTIVE"
     assert token
     assert service.authentication_service.revoke_session(token)

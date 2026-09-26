@@ -33,8 +33,10 @@ from phoenix_core.http_api.reports import router as reports_router
 from phoenix_core.http_api.settings import router as settings_router
 from phoenix_core.http_api.visibility import router as visibility_router
 from phoenix_core.http_api.workspaces import router as workspace_router
+from phoenix_core.http_api.production import router as production_router
 from phoenix_core.infrastructure import SQLiteDatabase
 from phoenix_core.migration_runner import apply_all as apply_all_migrations
+from phoenix_production_module import __module_code__, __module_name__, __version__
 
 
 SESSION_COOKIE = "phoenix_session"
@@ -489,6 +491,7 @@ def create_development_app(
     app.include_router(settings_router)
     app.include_router(visibility_router)
     app.include_router(workspace_router)
+    app.include_router(production_router)
 
     return app
 

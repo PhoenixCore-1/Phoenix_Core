@@ -28,7 +28,7 @@ def test_identity_current_integration_succeeds_for_authenticated_user(tmp_path):
     db, service = make_service(tmp_path)
     user, org = setup_user(service)
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -60,7 +60,7 @@ def test_identity_current_integration_enforces_tenant_boundary(tmp_path):
 
     other_org = service.organisation_service.create_organisation(code="INT-OTHER", name="Other Organisation")
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )
@@ -87,7 +87,7 @@ def test_identity_current_integration_rejects_revoked_session(tmp_path):
     db, service = make_service(tmp_path)
     user, org = setup_user(service)
 
-    session, token = service.authentication_service.authenticate(
+    session, token, _ = service.authentication_service.authenticate(
         user.username,
         "CorrectPassword123!",
     )

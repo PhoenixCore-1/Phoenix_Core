@@ -1,4 +1,4 @@
-﻿"""Phoenix Production HTTP API.
+"""Phoenix Production HTTP API.
 
 HTTP transport only. Production business rules remain in the
 Production module and persistence remains authoritative in Core.
@@ -71,7 +71,7 @@ def _operational_orders(
         FROM production_orders
         WHERE organisation_id=?
     """
-    params = [organisation_id]
+    params = [str(organisation_id)]
 
     if start_at is not None:
         sql += " AND required_date >= ?"
@@ -111,7 +111,7 @@ def _operational_orders(
               AND resolved_at IS NULL
             """,
             (
-                organisation_id,
+                str(organisation_id),
                 production_order_id,
             ),
         ).fetchone()
@@ -194,3 +194,4 @@ async def operational_snapshot(
         },
         "request_id": context.request_id,
     }
+

@@ -1,0 +1,132 @@
+﻿import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from 'react-router'
+
+import { usePlatformContext } from '../core/platform/PlatformContext'
+import { SystemShell } from '../system/SystemShell'
+import { SystemHome } from '../system/home/SystemHome'
+import { SystemCompanies } from '../system/companies/SystemCompanies'
+import { SystemUsers } from '../system/users/SystemUsers'
+import { BusinessModules } from '../system/modules/BusinessModules'
+import { UserShell } from '../user/UserShell'
+import { UserHome } from '../user/UserHome'
+import { ProductionShell } from '../production/ProductionShell'
+import { ProductionDashboard } from '../production/ProductionDashboard'
+import { ProductionPerformance } from '../production/ProductionPerformance'
+import { ProductionOrders } from '../production/ProductionOrders'
+import { ProductionEtaRisk } from '../production/ProductionEtaRisk'
+import { ProductionHolds } from '../production/ProductionHolds'
+
+function ProtectedRoutes() {
+  const { isAuthenticated, context } = usePlatformContext()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!context) {
+    return <Navigate to="/login" replace />
+  }
+
+  return (
+    <Routes>
+      <Route path="/system" element={<SystemShell />}>
+        <Route index element={<SystemHome />} />
+        <Route path="companies" element={<SystemCompanies />} />
+        <Route path="users" element={<SystemUsers />} />
+        <Route path="modules" element={<BusinessModules />} />
+      </Route>
+
+      <Route path="/user" element={<UserShell />}>
+        <Route index element={<UserHome />} />
+
+        <Route path="production" element={<ProductionShell />}>
+          <Route index element={<ProductionDashboard />} />
+          <Route
+            path="performance"
+            element={<ProductionPerformance />}
+          />
+          <Route
+            path="orders"
+            element={<ProductionOrders />}
+          />
+          <Route
+            path="eta-risk"
+            element={<ProductionEtaRisk />}
+          />
+          <Route
+            path="holds"
+            element={<ProductionHolds />}
+          />
+        </Route>
+      </Route>
+
+      <Route
+        path="/company/:companyId/*"
+        element={<CompanyRoutePlaceholder />}
+      />
+
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to={
+              context.user.platform_level === 'SYSTEM_ADMIN'
+                ? '/system'
+                : '/user'
+            }
+            replace
+          />
+        }
+      />
+
+    </Routes>
+  )
+}
+
+function ProductionPlaceholder({ title }: { title: string }) {
+  return (
+    <div className="panel">
+      <div className="empty-state">
+        <strong>{title}</strong>
+        <p className="muted">
+          This Production 360 workspace is being implemented in WP7.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function CompanyRoutePlaceholder() {
+  return <div className="center">Company Platform</div>
+}
+
+export function AppRoutes() {
+  const { isAuthenticated } = usePlatformContext()
+
+  return (
+    <BrowserRouter>
+      {!isAuthenticated ? (
+        <Routes>
+          <Route
+            path="/login"
+            element={<LoginRoutePlaceholder />}
+          />
+          <Route
+            path="*"
+            element={<Navigate to="/login" replace />}
+          />
+        </Routes>
+      ) : (
+        <ProtectedRoutes />
+      )}
+    </BrowserRouter>
+  )
+}
+
+function LoginRoutePlaceholder() {
+  return <div className="center">Login</div>
+}

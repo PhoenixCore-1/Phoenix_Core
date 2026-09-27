@@ -1,4 +1,4 @@
-from uuid import UUID
+﻿from uuid import UUID
 
 from phoenix_core.errors import AuthorizationError
 
@@ -8,7 +8,7 @@ class CompanyRoleQueryService:
 
     def __init__(self, core_api):
         self.core_api = core_api
-        self.core_service = core_api.core_service
+        self.core_service = core_api.role_service
 
     def list_roles(self, context):
         self.core_api.require_permission(context, "company.roles.manage")
@@ -16,6 +16,35 @@ class CompanyRoleQueryService:
         items = self.core_service.list_roles(
             context.organisation_id
         )
+
+        return {
+            "items": [
+                {
+                    "id": str(item.id),
+                    "organisation_id": str(item.organisation_id),
+                    "code": item.code,
+                    "name": item.name,
+                    "scope": item.scope,
+                    "status": item.status,
+                    "created_at": item.created_at.isoformat(),
+                }
+                for item in items
+            ]
+        }
+
+    def list_membership_roles(self, context, membership_id: UUID):
+        self.core_api.require_permission(context, "company.roles.manage")
+
+        membership = self.core_api.core_service.get_membership(
+            membership_id
+        )
+
+        if membership.organisation_id != context.organisation_id:
+            raise AuthorizationError(
+                "Membership does not belong to the current organisation."
+            )
+
+        items = self.core_service.list_assigned_roles(membership_id)
 
         return {
             "items": [
@@ -72,3 +101,4 @@ class CompanyRoleQueryService:
                 for item in items
             ]
         }
+

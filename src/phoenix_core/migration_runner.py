@@ -1,4 +1,4 @@
-﻿"""Central Phoenix Core migration bootstrap."""
+"""Central Phoenix Core migration bootstrap."""
 
 from pathlib import Path
 
@@ -48,3 +48,5 @@ def apply_all(db) -> None:
     except Exception:
         db.rollback()
         raise
+
+

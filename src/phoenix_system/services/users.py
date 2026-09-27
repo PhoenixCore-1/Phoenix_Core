@@ -9,6 +9,7 @@ def _session_context(request: Request):
     api = request.app.state.core_api
     token = request.cookies.get("phoenix_session")
 
+
     if not token:
         raise AuthenticationError("Authentication required.")
 
@@ -141,10 +142,10 @@ async def create_system_user(request: Request):
             "Username, display name and a password of at least 12 characters are required."
         )
 
-    created = api.core_service.create_user(
-        username,
-        display_name,
-        password,
+    created = api.user_service.create_user(
+        username=username,
+        display_name=display_name,
+        password=password,
     )
 
     api.db.execute(
@@ -184,7 +185,7 @@ def suspend_system_user(request: Request, user_id: UUID):
     if not target:
         raise ValidationError("System user not found.")
 
-    api.core_service.suspend_user(user_id)
+    api.user_service.suspend_user(user_id)
 
     _audit_system_user(
         request,
@@ -216,7 +217,7 @@ def reactivate_system_user(request: Request, user_id: UUID):
     if not target:
         raise ValidationError("System user not found.")
 
-    api.core_service.reactivate_user(user_id)
+    api.user_service.reactivate_user(user_id)
 
     _audit_system_user(
         request,
@@ -242,17 +243,26 @@ async def reset_system_user_password(
 
     _require_system_admin(user)
 
+    payload = await request.json()
+    password = str(payload.get("password", ""))
+    organisation_id = str(payload.get("organisation_id", ""))
+
+    if not organisation_id:
+        raise ValidationError("Company is required.")
+
     target = api.db.execute(
-        "SELECT id FROM users "
-        "WHERE id=? AND platform_level='SYSTEM_ADMIN'",
-        (str(user_id),),
+        "SELECT u.id, u.identity_id FROM users u "
+        "JOIN organisation_memberships m "
+        "ON m.identity_id=u.identity_id "
+        "WHERE u.id=? AND m.organisation_id=? "
+        "AND m.status='ACTIVE'",
+        (str(user_id), organisation_id),
     ).fetchone()
 
     if not target:
-        raise ValidationError("System user not found.")
-
-    payload = await request.json()
-    password = str(payload.get("password", ""))
+        raise ValidationError(
+            "User is not an active member of the selected company."
+        )
 
     api.authentication_service.admin_reset_password(
         user_id,
@@ -309,3 +319,8 @@ def require_system_user_password_reset(
             "password_reset_required": 1,
         }
     }
+
+
+
+
+

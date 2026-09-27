@@ -1,6 +1,14 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { NavLink, Outlet } from 'react-router'
 import './styles.css'
+import { AppRoutes } from './app/AppRoutes'
+import { SystemHome } from './system/home/SystemHome'
+import { api as coreApi } from './core/api'
+import {
+  PlatformProvider,
+  usePlatformContext,
+} from './core/platform/PlatformContext'
 
 type PlatformLevel =
   | 'SYSTEM_ADMIN'
@@ -68,6 +76,9 @@ async function api(
   path: string,
   options: ApiOptions = {},
 ): Promise<any> {
+  return coreApi(path, options)
+
+  /*
   const response = await fetch(path, {
     ...options,
     credentials: 'include',
@@ -89,46 +100,19 @@ async function api(
   }
 
   return body.data
+  */
 }
 
 function App() {
-  const [page, setPage] = useState<'login' | 'app'>(
-    'login',
-  )
+  const {
+    context,
+    isAuthenticated,
+    loading,
+    mustChangePassword,
+    logout,
+  } = usePlatformContext()
 
-  const [context, setContext] =
-    useState<Context | null>(null)
-
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    api('/api/v1/baseline/context')
-      .then((contextData: Context) => {
-        setContext(contextData)
-        setPage('app')
-      })
-      .catch(() => {
-        setPage('login')
-      })
-  }, [])
-
-  if (page === 'login') {
-    return (
-      <Login
-        onSuccess={(contextData) => {
-          setContext(contextData)
-          setPage('app')
-        }}
-        error={error}
-        setError={setError}
-        loading={loading}
-        setLoading={setLoading}
-      />
-    )
-  }
-
-  if (!context) {
+  if (loading && !isAuthenticated) {
     return (
       <div className="center">
         Loading Phoenix...
@@ -136,37 +120,260 @@ function App() {
     )
   }
 
+  if (!isAuthenticated || !context) {
+    return <Login />
+  }
+
+  if (mustChangePassword) {
+    return <ChangePassword />
+  }
+
+  if (context.user.platform_level === 'COMPANY_ADMIN') {
+    if (window.location.pathname !== '/company') {
+      window.history.replaceState(null, '', '/company')
+    }
+
+    return (
+      <CompanyShell
+        context={context}
+        onLogout={() => void logout()}
+      />
+    )
+  }
+
+  return <AppRoutes />
+}
+function ChangePassword() {
+  const {
+    changePassword,
+    logout,
+  } = usePlatformContext()
+
+  const [currentPassword, setCurrentPassword] =
+    useState('')
+  const [newPassword, setNewPassword] =
+    useState('')
+  const [confirmPassword, setConfirmPassword] =
+    useState('')
+  const [showCurrentPassword, setShowCurrentPassword] =
+    useState(false)
+  const [showNewPassword, setShowNewPassword] =
+    useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const submit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault()
+    setError('')
+
+    if (newPassword.length < 12) {
+      setError(
+        'Your new password must be at least 12 characters.',
+      )
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('The new passwords do not match.')
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      await changePassword(
+        currentPassword,
+        newPassword,
+      )
+    } catch (changeError) {
+      setError(
+        changeError instanceof Error
+          ? changeError.message
+          : 'Unable to change password.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <Shell
-      context={context}
-      onLogout={async () => {
-        try {
-          await api('/api/v1/auth/logout', {
-            method: 'POST',
-          })
-        } finally {
-          setContext(null)
-          setError('')
-          setPage('login')
-        }
-      }}
-    />
+    <div className="login-page">
+      <div className="login-card-new">
+        <div className="login-header-brand">
+          <img
+            src="/phoenix.png"
+            alt="Phoenix"
+          />
+
+          <div className="brand-divider"></div>
+
+          <div className="brand-title">
+            PHOENIX CORE
+            <span>PLATFORM</span>
+          </div>
+        </div>
+
+        <div className="login-heading">
+          <h1>Change your password</h1>
+
+          <p>
+            Your administrator provided a temporary
+            password. You must choose a new password
+            before continuing.
+          </p>
+        </div>
+
+        {error && (
+          <div className="error">
+            {error}
+          </div>
+        )}
+
+        <form
+          className="login-form-new"
+          onSubmit={submit}
+        >
+          <label>
+            Temporary password
+
+            <div className="password-input-wrapper">
+              <input
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(event) =>
+                  setCurrentPassword(
+                    event.target.value,
+                  )
+                }
+                autoComplete="current-password"
+                required
+              />
+
+              <button
+                type="button"
+                className="password-visibility-button"
+                onClick={() =>
+                  setShowCurrentPassword(
+                    (visible) => !visible,
+                  )
+                }
+                aria-label={
+                  showCurrentPassword
+                    ? 'Hide temporary password'
+                    : 'Show temporary password'
+                }
+              >
+                {showCurrentPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </label>
+
+          <label>
+            New password
+
+            <div className="password-input-wrapper">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(event) =>
+                  setNewPassword(
+                    event.target.value,
+                  )
+                }
+                autoComplete="new-password"
+                minLength={12}
+                required
+              />
+
+              <button
+                type="button"
+                className="password-visibility-button"
+                onClick={() =>
+                  setShowNewPassword(
+                    (visible) => !visible,
+                  )
+                }
+                aria-label={
+                  showNewPassword
+                    ? 'Hide new password'
+                    : 'Show new password'
+                }
+              >
+                {showNewPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </label>
+
+          <label>
+            Confirm new password
+
+            <div className="password-input-wrapper">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(event) =>
+                  setConfirmPassword(
+                    event.target.value,
+                  )
+                }
+                autoComplete="new-password"
+                minLength={12}
+                required
+              />
+
+              <button
+                type="button"
+                className="password-visibility-button"
+                onClick={() =>
+                  setShowConfirmPassword(
+                    (visible) => !visible,
+                  )
+                }
+                aria-label={
+                  showConfirmPassword
+                    ? 'Hide confirmed password'
+                    : 'Show confirmed password'
+                }
+              >
+                {showConfirmPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </label>
+
+          <button
+            type="submit"
+            className="login-submit-new"
+            disabled={saving}
+          >
+            {saving
+              ? 'Updating password...'
+              : 'Set new password'}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          className="login-secondary-button"
+          onClick={() => void logout()}
+          disabled={saving}
+        >
+          Sign out
+        </button>
+      </div>
+    </div>
   )
 }
+function Login() {
+  const {
+    login,
+    error,
+    loading,
+  } = usePlatformContext()
 
-function Login({
-  onSuccess,
-  error,
-  setError,
-  loading,
-  setLoading,
-}: {
-  onSuccess: (context: Context) => void
-  error: string
-  setError: (value: string) => void
-  loading: boolean
-  setLoading: (value: boolean) => void
-}) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] =
@@ -179,33 +386,12 @@ function Login({
   ) => {
     event.preventDefault()
 
-    setError('')
-    setLoading(true)
-
     try {
-      await api('/api/v1/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      })
-
-      const contextData =
-        await api('/api/v1/baseline/context')
-
-      onSuccess(contextData)
-    } catch (loginError) {
-      setError(
-        loginError instanceof Error
-          ? loginError.message
-          : 'Unable to sign in.',
-      )
-    } finally {
-      setLoading(false)
+      await login(username, password)
+    } catch {
+      // PlatformContext exposes the normalized login error.
     }
   }
-
   return (
     <div className="login-page">
       <div className="login-card-new">
@@ -325,7 +511,7 @@ function Login({
             Phoenix Core Platform V1.0.0
           </span>
 
-          <b>�</b>
+          <b>ï¿½</b>
 
           <span>
             Secure access
@@ -348,10 +534,7 @@ function Shell({
     'SYSTEM_ADMIN'
   ) {
     return (
-      <SystemShell
-        context={context}
-        onLogout={onLogout}
-      />
+      <SystemShell />
     )
   }
 
@@ -379,15 +562,15 @@ function Shell({
 /* SYSTEM PLATFORM                                                            */
 /* -------------------------------------------------------------------------- */
 
-function SystemShell({
-  context,
-  onLogout,
-}: {
-  context: Context
-  onLogout: () => void
-}) {
-  const [view, setView] =
-    useState<SystemView>('home')
+function SystemShell() {
+  const {
+    context,
+    logout,
+  } = usePlatformContext()
+
+  if (!context) {
+    return null
+  }
 
   return (
     <div className="shell">
@@ -406,135 +589,51 @@ function SystemShell({
         </div>
 
         <nav>
-          <button
-            type="button"
-            className={
-              view === 'home'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('home')
+          <NavLink
+            to="/system"
+            end
+            className={({ isActive }) =>
+              isActive ? 'active' : ''
             }
           >
             Home
-          </button>
+          </NavLink>
 
-          <button
-            type="button"
-            className={
-              view === 'companies'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('companies')
+          <NavLink
+            to="/system/companies"
+            className={({ isActive }) =>
+              isActive ? 'active' : ''
             }
           >
             Companies
-          </button>
+          </NavLink>
 
-          <button
-            type="button"
-            className={
-              view === 'system-users'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('system-users')
+          <NavLink
+            to="/system/users"
+            className={({ isActive }) =>
+              isActive ? 'active' : ''
             }
           >
             System Users
-          </button>
+          </NavLink>
 
-          <button
-            type="button"
-            className={
-              view === 'business-modules'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView(
-                'business-modules',
-              )
+          <NavLink
+            to="/system/modules"
+            className={({ isActive }) =>
+              isActive ? 'active' : ''
             }
           >
             Business Modules
-          </button>
+          </NavLink>
 
-          <button
-            type="button"
-            className={
-              view === 'billing'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('billing')
+          <NavLink
+            to="/system/governance"
+            className={({ isActive }) =>
+              isActive ? 'active' : ''
             }
           >
-            Billing
-          </button>
-
-          <button
-            type="button"
-            className={
-              view === 'quotes'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('quotes')
-            }
-          >
-            Quotes
-          </button>
-
-          <button
-            type="button"
-            className={
-              view === 'platform-reporting'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView(
-                'platform-reporting',
-              )
-            }
-          >
-            Platform Reporting
-          </button>
-
-          <button
-            type="button"
-            className={
-              view === 'admin'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('admin')
-            }
-          >
-            Admin
-          </button>
-
-          <button
-            type="button"
-            className={
-              view === 'notifications'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('notifications')
-            }
-          >
-            Notifications
-          </button>
+            Legal Governance
+          </NavLink>
         </nav>
 
         <div className="side-foot">
@@ -561,7 +660,7 @@ function SystemShell({
 
             <button
               type="button"
-              onClick={onLogout}
+              onClick={logout}
             >
               Sign out
             </button>
@@ -569,69 +668,7 @@ function SystemShell({
         </header>
 
         <section className="content">
-          {view === 'home' && (
-            <SystemHome
-              context={context}
-              onNavigate={setView}
-            />
-          )}
-
-          {view === 'companies' && (
-            <SystemCompanies />
-          )}
-
-          {view === 'system-users' && (
-            <SystemUsers />
-          )}
-
-          {view === 'business-modules' && (
-            <Placeholder
-              eyebrow="BUSINESS MODULES"
-              title="Business modules"
-              description="Manage active modules, licensing and trials."
-            />
-          )}
-
-          {view === 'billing' && (
-            <Placeholder
-              eyebrow="BILLING"
-              title="Billing"
-              description="Phoenix customer billing will be managed here."
-            />
-          )}
-
-          {view === 'quotes' && (
-            <Placeholder
-              eyebrow="QUOTES"
-              title="Quotes"
-              description="Create and manage Phoenix customer quotes."
-            />
-          )}
-
-          {view ===
-            'platform-reporting' && (
-            <Placeholder
-              eyebrow="PLATFORM REPORTING"
-              title="Platform reporting"
-              description="Monitor Phoenix Core and business module versions."
-            />
-          )}
-
-          {view === 'admin' && (
-            <Placeholder
-              eyebrow="ADMIN"
-              title="Phoenix administration"
-              description="Platform-wide Phoenix configuration will be managed here."
-            />
-          )}
-
-          {view === 'notifications' && (
-            <Placeholder
-              eyebrow="NOTIFICATIONS"
-              title="Phoenix Connect"
-              description="System notifications and Phoenix Connect integration will be managed here."
-            />
-          )}
+          <Outlet />
         </section>
       </main>
     </div>
@@ -674,10 +711,17 @@ function SystemUsers() {
 
     try {
       const data = await api(
-        `/api/v1/baseline/system/users?search=${encodeURIComponent(search)}`,
+        `/api/v1/system/users?search=${encodeURIComponent(search)}`,
       )
 
-      const items = data.items || []
+      const items =
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data.data?.items)
+            ? data.data.items
+            : Array.isArray(data.items)
+              ? data.items
+              : []
       setUsers(items)
 
       if (selectedUser) {
@@ -695,6 +739,29 @@ function SystemUsers() {
       )
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRoles = async () => {
+    try {
+      const data = await api('/api/v1/company/roles')
+      const items = Array.isArray(data)
+        ? data
+        : data.data || data.items || []
+
+      setRoles(
+        items.filter(
+          (role: any) =>
+            role.status === 'ACTIVE' &&
+            role.code !== 'COMPANY.ADMIN',
+        ),
+      )
+    } catch (roleError) {
+      setMessage(
+        roleError instanceof Error
+          ? roleError.message
+          : 'Unable to load roles.',
+      )
     }
   }
 
@@ -719,7 +786,7 @@ function SystemUsers() {
 
     try {
       await api(
-        `/api/v1/baseline/system/users/${userId}/${action}`,
+        `/api/v1/system/users/${userId}/${action}`,
         {
           method: 'POST',
           ...(body
@@ -759,7 +826,7 @@ function SystemUsers() {
 
     try {
       await api(
-        '/api/v1/baseline/system/users',
+        '/api/v1/system/users',
         {
           method: 'POST',
           body: JSON.stringify(form),
@@ -1075,7 +1142,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                �
+                ï¿½
               </button>
             </div>
 
@@ -1156,455 +1223,6 @@ function SystemUsers() {
 
 /* -------------------------------------------------------------------------- */
 /* SYSTEM HOME                                                                */
-/* -------------------------------------------------------------------------- */
-
-type KpiCardProps = {
-  value: string | number
-  label: string
-  secondary?: string
-  onClick: () => void
-  disabled?: boolean
-}
-
-function KpiCard({
-  value,
-  label,
-  secondary,
-  onClick,
-  disabled = false,
-}: KpiCardProps) {
-  return (
-    <button
-      type="button"
-      className={`kpi-card ${
-        disabled ? 'disabled' : ''
-      }`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <span className="kpi-label">
-        {label}
-      </span>
-
-      <strong className="kpi-value">
-        {value}
-      </strong>
-
-      {secondary && (
-        <span className="kpi-secondary">
-          {secondary}
-        </span>
-      )}
-
-      {!disabled && (
-        <span className="kpi-drill">
-          View details ?
-        </span>
-      )}
-    </button>
-  )
-}
-
-function getGreeting(
-  displayName: string,
-) {
-  const hour =
-    new Date().getHours()
-
-  if (hour < 12) {
-    return `Good morning, ${displayName}`
-  }
-
-  if (hour < 18) {
-    return `Good afternoon, ${displayName}`
-  }
-
-  return `Good evening, ${displayName}`
-}
-
-function SystemHome({
-  context,
-  onNavigate,
-}: {
-  context: Context
-  onNavigate: (
-    view: SystemView,
-  ) => void
-}) {
-  const [companies, setCompanies] =
-    useState<Company[]>([])
-
-  const [modules, setModules] =
-    useState<Module[]>([])
-
-  const [loading, setLoading] =
-    useState(true)
-
-  const [loadError, setLoadError] =
-    useState('')
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true)
-        setLoadError('')
-
-        const [
-          companyData,
-          moduleData,
-        ] = await Promise.all([
-          api(
-            '/api/v1/system/companies',
-          ),
-          api(
-            '/api/v1/system/modules',
-          ),
-        ])
-
-        setCompanies(
-          companyData.items || [],
-        )
-
-        setModules(
-          moduleData.items || [],
-        )
-      } catch (error) {
-        setLoadError(
-          error instanceof Error
-            ? error.message
-            : 'Unable to load dashboard data.',
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    load()
-  }, [])
-
-  const totalCompanies =
-    companies.length
-
-  const activeCompanies =
-    companies.filter(
-      (company) =>
-        company.status.toLowerCase() ===
-        'active',
-    ).length
-
-  const activeBusinessModules =
-    new Set(
-      modules
-        .filter(
-          (module) =>
-            module.active,
-        )
-        .map(
-          (module) =>
-            module.code,
-        ),
-    ).size
-
-  const recentCompanies =
-    [...companies]
-      .slice(-5)
-      .reverse()
-
-  return (
-    <>
-      <div className="dashboard-heading">
-        <span className="eyebrow">
-          SYSTEM PLATFORM
-        </span>
-
-        <h1>
-          {getGreeting(
-            context.user.display_name,
-          )}
-        </h1>
-
-        <p className="muted">
-          Welcome back to Phoenix Core.
-          Here's what's happening across
-          your platform.
-        </p>
-      </div>
-
-      {loadError && (
-        <div className="error">
-          {loadError}
-        </div>
-      )}
-
-      <div className="kpi-grid">
-        <KpiCard
-          value={
-            loading
-              ? '�'
-              : totalCompanies
-          }
-          label="Total Companies"
-          secondary={
-            loading
-              ? 'Loading...'
-              : `${totalCompanies} registered`
-          }
-          onClick={() =>
-            onNavigate('companies')
-          }
-          disabled={loading}
-        />
-
-        <KpiCard
-          value={
-            loading
-              ? '�'
-              : activeCompanies
-          }
-          label="Active Companies"
-          secondary={
-            loading
-              ? 'Loading...'
-              : `${activeCompanies} currently active`
-          }
-          onClick={() =>
-            onNavigate('companies')
-          }
-          disabled={loading}
-        />
-
-        <KpiCard
-          value="�"
-          label="System Users"
-          secondary="Data will be connected"
-          onClick={() =>
-            onNavigate(
-              'system-users',
-            )
-          }
-        />
-
-        <KpiCard
-          value={
-            loading
-              ? '�'
-              : activeBusinessModules
-          }
-          label="Active Business Modules"
-          secondary={
-            loading
-              ? 'Loading...'
-              : `${activeBusinessModules} active across platform`
-          }
-          onClick={() =>
-            onNavigate(
-              'business-modules',
-            )
-          }
-          disabled={loading}
-        />
-
-        <KpiCard
-          value="�"
-          label="Companies on Trial"
-          secondary="Trial data will be connected"
-          onClick={() =>
-            onNavigate(
-              'business-modules',
-            )
-          }
-        />
-
-        <KpiCard
-          value="�"
-          label="Active Licences"
-          secondary="Licence data will be connected"
-          onClick={() =>
-            onNavigate(
-              'business-modules',
-            )
-          }
-        />
-
-        <KpiCard
-          value="�"
-          label="Pending Quotes"
-          secondary="Quote data will be connected"
-          onClick={() =>
-            onNavigate('quotes')
-          }
-        />
-
-        <KpiCard
-          value="�"
-          label="Notifications"
-          secondary="Notification data will be connected"
-          onClick={() =>
-            onNavigate(
-              'notifications',
-            )
-          }
-        />
-      </div>
-
-      <div className="dashboard-sections">
-        <div className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">
-                PLATFORM STATUS
-              </span>
-
-              <h3>
-                Phoenix Core
-              </h3>
-            </div>
-
-            <span className="status-badge">
-              ONLINE
-            </span>
-          </div>
-
-          <div className="status-row">
-            <span>
-              Core version
-            </span>
-
-            <strong>
-              V1.0.0
-            </strong>
-          </div>
-
-          <div className="status-row">
-            <span>
-              Business modules
-            </span>
-
-            <strong>
-              {loading
-                ? '�'
-                : `${activeBusinessModules} active`}
-            </strong>
-          </div>
-
-          <div className="status-row">
-            <span>
-              Platform access
-            </span>
-
-            <strong>
-              Operational
-            </strong>
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">
-                RECENT COMPANIES
-              </span>
-
-              <h3>
-                Latest registered companies
-              </h3>
-            </div>
-
-            <button
-              type="button"
-              className="text-button"
-              onClick={() =>
-                onNavigate(
-                  'companies',
-                )
-              }
-            >
-              View all ?
-            </button>
-          </div>
-
-          {loading && (
-            <p className="muted">
-              Loading companies...
-            </p>
-          )}
-
-          {!loading &&
-            recentCompanies.length ===
-              0 && (
-              <p className="muted">
-                No companies registered
-                yet.
-              </p>
-            )}
-
-          {!loading &&
-            recentCompanies.map(
-              (company) => (
-                <div
-                  className="activity-row"
-                  key={company.id}
-                >
-                  <div>
-                    <strong>
-                      {company.name}
-                    </strong>
-
-                    <span>
-                      {company.code}
-                    </span>
-                  </div>
-
-                  <span
-                    className={
-                      company.status
-                        .toLowerCase() ===
-                      'active'
-                        ? 'status-badge'
-                        : 'status-badge neutral'
-                    }
-                  >
-                    {company.status}
-                  </span>
-                </div>
-              ),
-            )}
-        </div>
-
-        <div className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="eyebrow">
-                RECENT ACTIVITY
-              </span>
-
-              <h3>
-                System activity
-              </h3>
-            </div>
-          </div>
-
-          <div className="empty-state">
-            <strong>
-              Activity tracking is coming
-              next.
-            </strong>
-
-            <p className="muted">
-              This area will show important
-              Phoenix system events once
-              platform activity logging is
-              connected.
-            </p>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
-/* -------------------------------------------------------------------------- */
-/* SYSTEM COMPANIES                                                           */
 /* -------------------------------------------------------------------------- */
 
 function SystemCompanies() {
@@ -2063,6 +1681,7 @@ function CompanyShell({
   const [profileOpen, setProfileOpen] =
     useState(false)
 
+
   const [search, setSearch] =
     useState('')
 
@@ -2169,7 +1788,7 @@ function CompanyShell({
               setView('home')
             }
           >
-            <span className="company-nav-icon">�</span>
+            <span className="company-nav-icon">ï¿½</span>
             Home
           </button>
 
@@ -2296,7 +1915,7 @@ function CompanyShell({
                         setNotificationsOpen(false)
                       }
                     >
-                      �
+                      ï¿½
                     </button>
                   </div>
 
@@ -2569,7 +2188,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} � v{module.version}
+                      {module.code} ï¿½ v{module.version}
                     </span>
                   </div>
 
@@ -2676,12 +2295,56 @@ function CompanyUsers() {
   const [selectedUserId, setSelectedUserId] =
     useState<string | null>(null)
 
+  const [userAccess, setUserAccess] =
+    useState<any | null>(null)
+
+  const [showUserAccess, setShowUserAccess] =
+    useState(false)
+
+  const [accessLoading, setAccessLoading] =
+    useState(false)
+
+  const viewUserAccess = async () => {
+    if (!selectedUserId) {
+      return
+    }
+
+    setAccessLoading(true)
+    setMessage('')
+
+    try {
+      const data = await api(
+        `/api/v1/company/users/${selectedUserId}/access`,
+      )
+
+      setUserAccess(
+        data.data || data,
+      )
+
+      setShowUserAccess(true)
+    } catch (accessError) {
+      setMessage(
+        accessError instanceof Error
+          ? accessError.message
+          : 'Unable to load user access.',
+      )
+    } finally {
+      setAccessLoading(false)
+    }
+  }
+
   const [search, setSearch] =
     useState('')
 
   const [showAdd, setShowAdd] =
     useState(false)
+  const [roles, setRoles] =
+    useState<any[]>([])
 
+  const [selectedRoleId, setSelectedRoleId] =
+    useState('')
+  const [roleAssigning, setRoleAssigning] =
+    useState(false)
   const [form, setForm] =
     useState({
       username: '',
@@ -2699,7 +2362,14 @@ function CompanyUsers() {
           '/api/v1/company/users',
         )
 
-      const items = data.items || []
+      const items =
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data.data?.items)
+            ? data.data.items
+            : Array.isArray(data.items)
+              ? data.items
+              : []
 
       setUsers(items)
 
@@ -2718,8 +2388,64 @@ function CompanyUsers() {
     }
   }
 
+  const loadRoles = async () => {
+    try {
+      const data = await api('/api/v1/company/roles')
+      const items = Array.isArray(data)
+        ? data
+        : data.data?.items || data.items || []
+
+      setRoles(
+        items.filter(
+          (role: any) =>
+            role.status === 'ACTIVE' &&
+            role.code !== 'COMPANY.ADMIN',
+        ),
+      )
+    } catch (roleError) {
+      setMessage(
+        roleError instanceof Error
+          ? roleError.message
+          : 'Unable to load roles.',
+      )
+    }
+  }
+
+
+  const assignRole = async () => {
+    if (!selectedUser?.membership_id || !selectedRoleId) {
+      return
+    }
+
+    setRoleAssigning(true)
+    setMessage('')
+
+    try {
+      await api(
+        `/api/v1/company/memberships/${selectedUser.membership_id}/roles/${selectedRoleId}`,
+        { method: 'POST' },
+      )
+
+      const data = await api(
+        `/api/v1/company/users/${selectedUser.id}/access`,
+      )
+
+      setUserAccess(data.data || data)
+      setSelectedRoleId('')
+      setMessage('Role assigned successfully.')
+    } catch (roleError) {
+      setMessage(
+        roleError instanceof Error
+          ? roleError.message
+          : 'Unable to assign role.',
+      )
+    } finally {
+      setRoleAssigning(false)
+    }
+  }
   useEffect(() => {
-    load()
+    void load()
+    void loadRoles()
   }, [])
 
   const add = async () => {
@@ -3028,17 +2754,22 @@ function CompanyUsers() {
               </div>
 
               <div className="company-user-detail-section">
-                <span className="eyebrow">
-                  ACCESS
-                </span>
+                <div className="section-heading-row">
+                  <span className="eyebrow">
+                    ACCESS
+                  </span>
 
-                <p className="muted">
-                  Role assignment and user
-                  lifecycle controls will be
-                  managed through the Company
-                  Roles and Users administration
-                  services.
-                </p>
+                  <button
+                    type="button"
+                    className="small-btn"
+                    onClick={viewUserAccess}
+                    disabled={accessLoading}
+                  >
+                    {accessLoading
+                      ? 'Loading...'
+                      : 'View Access'}
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -3076,7 +2807,7 @@ function CompanyUsers() {
                   setShowAdd(false)
                 }
               >
-                �
+                ï¿½
               </button>
             </div>
 
@@ -3153,6 +2884,203 @@ function CompanyUsers() {
           </div>
         </div>
       )}
+      {showUserAccess && userAccess && (
+        <div
+          className="company-modal-backdrop"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setShowUserAccess(false)
+            }
+          }}
+        >
+          <div className="company-modal">
+            <div className="company-modal-header">
+              <div>
+                <span className="eyebrow">
+                  COMPANY USER ACCESS
+                </span>
+
+                <h2>
+                  {userAccess.user?.display_name}
+                </h2>
+
+                <p>
+                  @{userAccess.user?.username}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="company-modal-close"
+                onClick={() =>
+                  setShowUserAccess(false)
+                }
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="company-modal-body">
+              <div className="company-user-status-strip">
+                <div>
+                  <span className="field-label">
+                    Account status
+                  </span>
+
+                  <strong>
+                    {userAccess.user?.status}
+                  </strong>
+                </div>
+
+                <div>
+                  <span className="field-label">
+                    Membership
+                  </span>
+
+                  <strong>
+                    {userAccess.membership?.status}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="company-user-detail-section">
+                <div className="section-heading-row">
+                  <span className="eyebrow">
+                    ROLE ASSIGNMENT
+                  </span>
+                </div>
+
+                <div className="company-access-role-row">
+                  <select
+                    className="company-input"
+                    value={selectedRoleId}
+                    onChange={(event) =>
+                      setSelectedRoleId(event.target.value)
+                    }
+                    disabled={roleAssigning}
+                  >
+                    <option value="">
+                      Select a company role...
+                    </option>
+
+                    {roles
+                      .filter(
+                        (role: any) =>
+                          !userAccess?.roles?.some(
+                            (assignedRole: any) =>
+                              assignedRole.id === role.id ||
+                              assignedRole.code === role.code,
+                          ),
+                      )
+                      .map((role: any) => (
+                        <option
+                          key={role.id}
+                          value={role.id}
+                        >
+                          {role.name} ({role.code})
+                        </option>
+                      ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    className="small-btn"
+                    onClick={assignRole}
+                    disabled={
+                      roleAssigning ||
+                      !selectedRoleId ||
+                      !selectedUser?.membership_id
+                    }
+                  >
+                    {roleAssigning
+                      ? 'Assigning...'
+                      : 'Assign Role'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="company-user-detail-section">
+                <span className="eyebrow">
+                  ASSIGNED ROLES
+                </span>
+
+                {userAccess.roles?.length ? (
+                  <div className="company-detail-grid">
+                    {userAccess.roles.map(
+                      (role: any) => (
+                        <div key={role.id}>
+                          <span className="field-label">
+                            {role.scope}
+                          </span>
+
+                          <strong>
+                            {role.code}
+                          </strong>
+
+                          <p className="muted">
+                            {role.name}
+                          </p>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <p className="muted">
+                    No roles are currently assigned.
+                  </p>
+                )}
+              </div>
+
+              <div className="company-user-detail-section">
+                <span className="eyebrow">
+                  EFFECTIVE PERMISSIONS
+                </span>
+
+                {userAccess.permissions?.length ? (
+                  <div className="company-permission-grid">
+                    {userAccess.permissions.map(
+                      (permission: any) => (
+                        <div
+                          key={permission.id}
+                          className="company-permission-item"
+                        >
+                          <strong>
+                            {permission.code}
+                          </strong>
+
+                          <span>
+                            {permission.name}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <p className="muted">
+                    No effective permissions are currently assigned.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="company-modal-footer">
+              <button
+                type="button"
+                className="company-primary-action"
+                onClick={() =>
+                  setShowUserAccess(false)
+                }
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   )
 }
@@ -3300,7 +3228,7 @@ function UserShell({
 
             <button
               type="button"
-              onClick={onLogout}
+              onClick={logout}
             >
               Sign out
             </button>
@@ -3475,9 +3403,43 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <PlatformProvider>
+      <App />
+    </PlatformProvider>
   </StrictMode>,
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

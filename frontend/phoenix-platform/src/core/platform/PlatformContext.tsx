@@ -1,0 +1,174 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+
+import {
+  changePassword as changePasswordRequest,
+  getContext,
+  login as loginRequest,
+  logout as logoutRequest,
+  setApiOrganisationId,
+} from '../api'
+import type { PlatformContext as PlatformContextData } from '../api'
+
+export interface PlatformContextValue {
+  context: PlatformContextData | null
+  isAuthenticated: boolean
+  loading: boolean
+  error: string
+  mustChangePassword: boolean
+  changePassword(currentPassword: string, newPassword: string): Promise<void>
+  login(username: string, password: string): Promise<void>
+  logout(): Promise<void>
+  refreshContext(): Promise<void>
+}
+
+const PlatformContext =
+  createContext<PlatformContextValue | null>(null)
+
+export function PlatformProvider({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const [context, setContext] =
+    useState<PlatformContextData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+
+  const refreshContext = useCallback(async () => {
+    try {
+      const contextData = await getContext()
+      setApiOrganisationId(contextData.company?.id ?? null)
+      setContext(contextData)
+      setError('')
+    } catch {
+      setContext(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshContext().finally(() => {
+      setLoading(false)
+    })
+  }, [refreshContext])
+
+  const login = useCallback(
+    async (username: string, password: string) => {
+      setError('')
+      setLoading(true)
+
+      try {
+        const loginResult = await loginRequest({ username, password }) as {
+          password_reset_required?: boolean
+        }
+        setMustChangePassword(loginResult.password_reset_required === true)
+        const contextData = await getContext()
+        setApiOrganisationId(contextData.company?.id ?? null)
+        setContext(contextData)
+      } catch (loginError) {
+        setError(
+          loginError instanceof Error
+            ? loginError.message
+            : 'Unable to sign in.',
+        )
+        throw loginError
+      } finally {
+        setLoading(false)
+      }
+    },
+    [],
+  )
+
+  const changePassword = useCallback(
+    async (
+      currentPassword: string,
+      newPassword: string,
+    ) => {
+      setError('')
+
+      try {
+        await changePasswordRequest(
+          currentPassword,
+          newPassword,
+        )
+        setMustChangePassword(false)
+      } catch (changeError) {
+        setError(
+          changeError instanceof Error
+            ? changeError.message
+            : 'Unable to change password.',
+        )
+        throw changeError
+      }
+    },
+    [],
+  )
+  const logout = useCallback(async () => {
+    try {
+      await logoutRequest()
+    } finally {
+      setApiOrganisationId(null)
+      setContext(null)
+      setMustChangePassword(false)
+      setError('')
+    }
+  }, [])
+
+  const value = useMemo<PlatformContextValue>(
+    () => ({
+      context,
+      isAuthenticated: context !== null,
+      loading,
+      error,
+      mustChangePassword,
+      changePassword,
+      login,
+      logout,
+      refreshContext,
+    }),
+    [
+      context,
+      loading,
+      error,
+      mustChangePassword,
+      changePassword,
+      login,
+      logout,
+      refreshContext,
+    ],
+  )
+
+  return (
+    <PlatformContext.Provider value={value}>
+      {children}
+    </PlatformContext.Provider>
+  )
+}
+
+export function usePlatformContext() {
+  const value = useContext(PlatformContext)
+
+  if (!value) {
+    throw new Error(
+      'usePlatformContext must be used within PlatformProvider.',
+    )
+  }
+
+  return value
+}
+
+
+
+
+
+
+
+

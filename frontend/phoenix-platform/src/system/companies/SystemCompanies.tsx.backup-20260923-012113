@@ -1,0 +1,423 @@
+﻿import { useEffect, useMemo, useState } from 'react'
+import { api } from '../../core/api'
+
+type Company = {
+  id: string
+  code: string
+  name: string
+  status: string
+  created_at?: string
+  registration_number?: string
+  primary_contact_email?: string
+  description?: string
+}
+
+export function SystemCompanies() {
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
+
+  const [loading, setLoading] = useState(true)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const [showAddCompany, setShowAddCompany] = useState(false)
+
+  const [newCode, setNewCode] = useState('')
+  const [newName, setNewName] = useState('')
+
+  const [editName, setEditName] = useState('')
+  const [editCode, setEditCode] = useState('')
+  const [editRegistrationNumber, setEditRegistrationNumber] = useState('')
+  const [editPrimaryContactEmail, setEditPrimaryContactEmail] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+
+  async function loadCompanies() {
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const response = await api('/api/v1/system/companies')
+      const data = response?.items ?? []
+
+      setCompanies(Array.isArray(data) ? data : [])
+
+      if (!selectedCompanyId && Array.isArray(data) && data.length > 0) {
+        setSelectedCompanyId(data[0].id)
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to load companies.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadCompany(companyId: string) {
+    setSelectedCompanyId(companyId)
+    setDetailLoading(true)
+    setMessage('')
+
+    try {
+      const response = await api(`/api/v1/system/companies/${companyId}`)
+      const company = response?.data ?? response
+
+      setSelectedCompany(company)
+
+      setEditName(company?.name ?? '')
+      setEditCode(company?.code ?? '')
+      setEditRegistrationNumber(company?.registration_number ?? '')
+      setEditPrimaryContactEmail(company?.primary_contact_email ?? '')
+      setEditDescription(company?.description ?? '')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to load company.')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  async function createCompany() {
+    if (!newCode.trim() || !newName.trim()) {
+      setMessage('Company code and company name are required.')
+      return
+    }
+
+    setSaving(true)
+    setMessage('')
+
+    try {
+      await api('/api/v1/system/companies', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: newCode.trim(),
+          name: newName.trim(),
+        }),
+      })
+
+      setNewCode('')
+      setNewName('')
+      setShowAddCompany(false)
+      setMessage('Company created successfully.')
+
+      await loadCompanies()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to create company.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveCompany() {
+    if (!selectedCompanyId) return
+
+    setSaving(true)
+    setMessage('')
+
+    try {
+      await api(`/api/v1/system/companies/${selectedCompanyId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          code: editCode.trim(),
+          name: editName.trim(),
+          registration_number: editRegistrationNumber.trim(),
+          primary_contact_email: editPrimaryContactEmail.trim(),
+          description: editDescription.trim(),
+        }),
+      })
+
+      setMessage('Company changes saved successfully.')
+
+      await loadCompanies()
+      await loadCompany(selectedCompanyId)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to save company.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadCompanies()
+  }, [])
+
+  useEffect(() => {
+    if (selectedCompanyId) {
+      void loadCompany(selectedCompanyId)
+    }
+  }, [selectedCompanyId])
+
+  const filteredCompanies = useMemo(() => {
+    const value = search.trim().toLowerCase()
+
+    return companies.filter((company) => {
+      const matchesSearch =
+        !value ||
+        company.name?.toLowerCase().includes(value) ||
+        company.code?.toLowerCase().includes(value)
+
+      const matchesStatus =
+        statusFilter === 'ALL' ||
+        company.status?.toUpperCase() === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [companies, search, statusFilter])
+
+  return (
+    <main className="companies-page">
+      <div className="companies-page-header">
+        <div>
+          <div className="page-eyebrow">COMPANIES</div>
+          <h1>Companies</h1>
+          <p>Create and manage companies using the Phoenix Company Platform.</p>
+        </div>
+      </div>
+
+      {message && (
+        <div className="company-message">
+          {message}
+        </div>
+      )}
+
+      <section className="companies-toolbar">
+        <div className="company-search">
+          <span>⌕</span>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search companies by name or code..."
+          />
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="ALL">All Statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="SUSPENDED">Suspended</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+
+        <button
+          className="phoenix-primary-button"
+          onClick={() => setShowAddCompany(true)}
+        >
+          + Add Company
+        </button>
+      </section>
+
+      {showAddCompany && (
+        <section className="add-company-panel">
+          <div>
+            <h2>Add Company</h2>
+            <p>Create a new company on the Phoenix platform.</p>
+          </div>
+
+          <div className="company-form-grid">
+            <label>
+              Company Code
+              <input
+                value={newCode}
+                onChange={(event) => setNewCode(event.target.value)}
+                placeholder="e.g. ACME"
+              />
+            </label>
+
+            <label>
+              Company Name
+              <input
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                placeholder="e.g. Acme (Pty) Ltd"
+              />
+            </label>
+          </div>
+
+          <div className="company-form-actions">
+            <button
+              className="phoenix-primary-button"
+              onClick={() => void createCompany()}
+              disabled={saving}
+            >
+              {saving ? 'Creating...' : 'Create Company'}
+            </button>
+
+            <button
+              className="phoenix-secondary-button"
+              onClick={() => setShowAddCompany(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
+      )}
+
+      <section className="companies-workspace">
+        <div className="companies-list-panel">
+          <div className="companies-list-header">
+            <h2>Companies ({filteredCompanies.length})</h2>
+            <span>Sort by: Name</span>
+          </div>
+
+          {loading ? (
+            <div className="company-empty-state">
+              Loading companies...
+            </div>
+          ) : filteredCompanies.length === 0 ? (
+            <div className="company-empty-state">
+              No companies found.
+            </div>
+          ) : (
+            <div className="company-list">
+              {filteredCompanies.map((company) => {
+                const selected = company.id === selectedCompanyId
+
+                return (
+                  <button
+                    key={company.id}
+                    className={`company-list-item ${selected ? 'selected' : ''}`}
+                    onClick={() => setSelectedCompanyId(company.id)}
+                  >
+                    <span className="company-list-icon">▦</span>
+
+                    <span className="company-list-content">
+                      <strong>{company.name}</strong>
+                      <small>{company.code}</small>
+                    </span>
+
+                    <span
+                      className={`company-status ${company.status?.toLowerCase()}`}
+                    >
+                      {company.status || 'UNKNOWN'}
+                    </span>
+
+                    <span className="company-chevron">›</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="company-detail-panel">
+          {detailLoading ? (
+            <div className="company-empty-state">
+              Loading company...
+            </div>
+          ) : !selectedCompany ? (
+            <div className="company-empty-state">
+              Select a company to view its details.
+            </div>
+          ) : (
+            <>
+              <div className="company-detail-header">
+                <div className="company-detail-title">
+                  <div className="company-large-icon">▦</div>
+
+                  <div>
+                    <div className="company-title-row">
+                      <h2>{selectedCompany.name}</h2>
+                      <span
+                        className={`company-status ${selectedCompany.status?.toLowerCase()}`}
+                      >
+                        {selectedCompany.status || 'UNKNOWN'}
+                      </span>
+                    </div>
+
+                    <p>
+                      Code: {selectedCompany.code}
+                      {selectedCompany.created_at
+                        ? ` | Created: ${new Date(
+                            selectedCompany.created_at,
+                          ).toLocaleDateString()}`
+                        : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="company-tabs">
+                <button className="active">Overview</button>
+                <button>Business Modules</button>
+                <button>Settings</button>
+                <button>Audit Log</button>
+              </div>
+
+              <div className="company-information-card">
+                <h3>Company Information</h3>
+
+                <div className="company-form-grid">
+                  <label>
+                    Company Name
+                    <input
+                      value={editName}
+                      onChange={(event) => setEditName(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Registration Number
+                    <input
+                      value={editRegistrationNumber}
+                      onChange={(event) =>
+                        setEditRegistrationNumber(event.target.value)
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Company Code
+                    <input
+                      value={editCode}
+                      onChange={(event) => setEditCode(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Primary Contact Email
+                    <input
+                      value={editPrimaryContactEmail}
+                      onChange={(event) =>
+                        setEditPrimaryContactEmail(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+
+                <div className="company-form-actions">
+                  <button
+                    className="phoenix-primary-button"
+                    onClick={() => void saveCompany()}
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="company-information-card">
+                <h3>Description</h3>
+
+                <label>
+                  Company Description
+                  <textarea
+                    value={editDescription}
+                    onChange={(event) => setEditDescription(event.target.value)}
+                    rows={5}
+                    placeholder="Enter a description for this company..."
+                  />
+                </label>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+

@@ -1,4 +1,4 @@
-from uuid import UUID
+﻿from uuid import UUID
 
 from fastapi import Request
 
@@ -30,16 +30,19 @@ def _session_context(request: Request):
     if not row:
         raise AuthenticationError("User session is not valid.")
 
-    org = api.db.execute(
-        "SELECT o.id,o.code,o.name,o.status "
-        "FROM organisations o "
-        "JOIN organisation_memberships m "
-        "ON m.organisation_id=o.id "
-        "WHERE m.identity_id=? "
-        "AND m.status='ACTIVE' "
-        "AND o.status='ACTIVE' LIMIT 1",
-        (row["identity_id"],),
-    ).fetchone()
+    org = None
+
+    if row["platform_level"] != "SYSTEM_ADMIN":
+        org = api.db.execute(
+            "SELECT o.id,o.code,o.name,o.status "
+            "FROM organisations o "
+            "JOIN organisation_memberships m "
+            "ON m.organisation_id=o.id "
+            "WHERE m.identity_id=? "
+            "AND m.status='ACTIVE' "
+            "AND o.status='ACTIVE' LIMIT 1",
+            (row["identity_id"],),
+        ).fetchone()
 
     return api, row, org
 
@@ -428,7 +431,51 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
     )
     api.db.commit()
 
-    api.company_membership_service.add_membership(created.identity_id, organisation_id)
+    api.company_membership_service.add_membership(
+        created.identity_id,
+        organisation_id,
+    )
+
+    membership = api.db.execute(
+        """
+        SELECT id
+        FROM organisation_memberships
+        WHERE identity_id=?
+          AND organisation_id=?
+          AND status='ACTIVE'
+        """,
+        (
+            str(created.identity_id),
+            str(organisation_id),
+        ),
+    ).fetchone()
+
+    if not membership:
+        raise ValidationError(
+            "Company Admin membership could not be established."
+        )
+
+    role = api.db.execute(
+        """
+        SELECT id
+        FROM roles
+        WHERE organisation_id=?
+          AND code='COMPANY.ADMIN'
+          AND scope='ORGANISATION'
+          AND status='ACTIVE'
+        """,
+        (str(organisation_id),),
+    ).fetchone()
+
+    if not role:
+        raise ValidationError(
+            "Protected COMPANY.ADMIN role is not configured for this company."
+        )
+
+    api.role_service.assign_protected_company_admin(
+        UUID(str(membership["id"])),
+        UUID(str(role["id"])),
+    )
 
     return {
         "data": {
@@ -437,6 +484,171 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
             "display_name": created.display_name,
             "platform_level": "COMPANY_ADMIN",
             "company_id": str(organisation_id),
+        }
+    }
+
+
+
+
+def get_system_company_admin_access(
+    request: Request,
+    organisation_id: UUID,
+):
+    api, user, org = _session_context(request)
+
+    _require_system_admin(user)
+
+    company = api.db.execute(
+        """
+        SELECT id, code, name, status
+        FROM organisations
+        WHERE id=? AND status='ACTIVE'
+        """,
+        (str(organisation_id),),
+    ).fetchone()
+
+    if not company:
+        raise ValidationError(
+            "Company not found or inactive."
+        )
+
+    admin = api.db.execute(
+        """
+        SELECT
+            u.id,
+            u.identity_id,
+            u.username,
+            u.display_name,
+            u.status,
+            u.platform_level,
+            u.password_reset_required,
+            m.id AS membership_id,
+            m.status AS membership_status
+        FROM users u
+        JOIN organisation_memberships m
+          ON m.identity_id=u.identity_id
+        WHERE m.organisation_id=?
+          AND m.status='ACTIVE'
+          AND u.platform_level='COMPANY_ADMIN'
+        ORDER BY u.created_at
+        LIMIT 1
+        """,
+        (str(organisation_id),),
+    ).fetchone()
+
+    if not admin:
+        return {
+            "data": {
+                "company": dict(company),
+                "admin": None,
+                "role": None,
+                "permissions": [],
+            }
+        }
+
+    role = api.db.execute(
+        """
+        SELECT
+            r.id,
+            r.code,
+            r.name,
+            r.scope,
+            r.status
+        FROM role_assignments ra
+        JOIN roles r
+          ON r.id=ra.role_id
+        WHERE ra.membership_id=?
+          AND r.status='ACTIVE'
+        ORDER BY r.code
+        LIMIT 1
+        """,
+        (str(admin["membership_id"]),),
+    ).fetchone()
+
+    permissions = []
+
+    if role:
+        permission_rows = api.db.execute(
+            """
+            SELECT
+                p.id,
+                p.code,
+                p.name
+            FROM role_permissions rp
+            JOIN permissions p
+              ON p.id=rp.permission_id
+            WHERE rp.role_id=?
+            ORDER BY p.code
+            """,
+            (str(role["id"]),),
+        ).fetchall()
+
+        permissions = [dict(row) for row in permission_rows]
+
+    return {
+        "data": {
+            "company": dict(company),
+            "admin": dict(admin),
+            "role": dict(role) if role else None,
+            "permissions": permissions,
+        }
+    }
+
+def get_system_company_admin(
+    request: Request,
+    organisation_id: UUID,
+):
+    api, user, org = _session_context(request)
+
+    _require_system_admin(user)
+
+    company = api.db.execute(
+        "SELECT id,code,name,status "
+        "FROM organisations "
+        "WHERE id=? AND status='ACTIVE'",
+        (str(organisation_id),),
+    ).fetchone()
+
+    if not company:
+        raise ValidationError("Company not found or inactive.")
+
+    admin = api.db.execute(
+        """
+        SELECT
+            u.id,
+            u.identity_id,
+            u.username,
+            u.display_name,
+            u.status,
+            u.platform_level,
+            u.password_reset_required,
+            u.created_at,
+            m.id AS membership_id,
+            m.status AS membership_status
+        FROM users u
+        JOIN organisation_memberships m
+            ON m.identity_id=u.identity_id
+        WHERE m.organisation_id=?
+          AND m.status='ACTIVE'
+          AND u.platform_level='COMPANY_ADMIN'
+        ORDER BY u.created_at
+        LIMIT 1
+        """,
+        (str(organisation_id),),
+    ).fetchone()
+
+    if not admin:
+        return {
+            "data": {
+                "company": dict(company),
+                "admin": None,
+            }
+        }
+
+    return {
+        "data": {
+            "company": dict(company),
+            "admin": dict(admin),
         }
     }
 

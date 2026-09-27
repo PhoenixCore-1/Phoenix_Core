@@ -129,3 +129,18 @@ def test_logout_revokes_session_and_clears_cookie(tmp_path):
 
 
 
+
+def test_production_module_is_registered_on_app_startup(tmp_path):
+    app = create_development_app(str(tmp_path / "production.db"))
+
+    row = app.state.db.execute(
+        "SELECT code, name, version, status "
+        "FROM modules WHERE code=?",
+        ("production",),
+    ).fetchone()
+
+    assert row is not None
+    assert row["code"] == "production"
+    assert row["name"] == "Production"
+    assert row["version"] == "1.3.25"
+    assert row["status"] == "REGISTERED"

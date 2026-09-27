@@ -1,4 +1,4 @@
-﻿import hashlib
+import hashlib
 import secrets
 from uuid import UUID
 
@@ -17,7 +17,7 @@ class AuthenticationService:
             raise ValidationError("Username and password are required.")
 
         row = self.db.execute(
-            "SELECT id, identity_id, password_hash, status FROM users WHERE username=?",
+            "SELECT id, identity_id, password_hash, status, password_reset_required FROM users WHERE username=?",
             (username,),
         ).fetchone()
 
@@ -55,7 +55,7 @@ class AuthenticationService:
             ),
         )
         self.db.commit()
-        return session, token
+        return session, token, bool(row["password_reset_required"])
 
     def resolve_session_id(self, token: str) -> UUID:
         if not token:
@@ -145,3 +145,5 @@ class AuthenticationService:
         )
         self.db.commit()
         return cur.rowcount == 1
+
+

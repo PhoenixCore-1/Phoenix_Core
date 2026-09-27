@@ -213,6 +213,18 @@ def create_development_app(
 
     core_api = CoreApi(db)
 
+    # Production 360 authoritative Core module registration.
+    existing_production = db.execute(
+        "SELECT id FROM modules WHERE code=?",
+        (__module_code__,),
+    ).fetchone()
+    if existing_production is None:
+        core_api.module_service.register(
+            __module_code__,
+            __module_name__,
+            __version__,
+        )
+
     app.state.db = db
     app.state.core_api = core_api
 
@@ -303,7 +315,7 @@ def create_development_app(
             value=token,
             httponly=True,
             samesite="lax",
-            secure=True,
+            secure=False,
             path="/",
         )
 
@@ -312,6 +324,53 @@ def create_development_app(
             "request_id": request.state.request_id,
         }
 
+    @app.post("/api/v1/auth/change-password")
+    async def change_password(request: Request):
+        session_id = _session_id(
+            request,
+            core_api,
+        )
+
+        session_row = core_api.db.execute(
+            "SELECT identity_id FROM sessions WHERE id=? AND status='ACTIVE'",
+            (str(session_id),),
+        ).fetchone()
+
+        if not session_row:
+            raise AuthenticationError(
+                "Authentication required."
+            )
+
+        user_row = core_api.db.execute(
+            "SELECT id FROM users WHERE identity_id=? AND status='ACTIVE'",
+            (session_row["identity_id"],),
+        ).fetchone()
+
+        if not user_row:
+            raise AuthenticationError(
+                "Authenticated user was not found."
+            )
+
+        payload = await request.json()
+
+        current_password = str(
+            payload.get("current_password", "")
+        )
+        new_password = str(
+            payload.get("new_password", "")
+        )
+
+        result = core_api.change_password(
+            request_id=request.state.request_id,
+            user_id=UUID(user_row["id"]),
+            current_password=current_password,
+            new_password=new_password,
+        )
+
+        return {
+            "data": result.data,
+            "request_id": request.state.request_id,
+        }
     @app.post("/api/v1/auth/logout")
     async def logout(
         request: Request,
@@ -494,6 +553,9 @@ def create_development_app(
     app.include_router(production_router)
 
     return app
+
+
+
 
 
 

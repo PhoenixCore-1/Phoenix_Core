@@ -576,12 +576,29 @@ class CoreApi:
             raise AuthorizationError("Module entitlement required.")
 
     def authenticate(self, *, request_id: str, username: str, password: str, organisation_id=None) -> ApiResponse:
-        session, token = self.authentication_service.authenticate(username, password, organisation_id)
+        session, token, password_reset_required = self.authentication_service.authenticate(username, password, organisation_id)
         return ApiResponse(data={
             "session_id": str(session.id), "identity_id": str(session.identity_id), "token": token,
-            "status": session.status, "expires_at": session.expires_at.isoformat(),
+            "status": session.status, "expires_at": session.expires_at.isoformat(), "password_reset_required": password_reset_required,
         }, request_id=request_id)
 
+    def change_password(
+        self,
+        *,
+        request_id: str,
+        user_id,
+        current_password: str,
+        new_password: str,
+    ) -> ApiResponse:
+        self.authentication_service.change_password(
+            user_id,
+            current_password,
+            new_password,
+        )
+        return ApiResponse(
+            data={"status": "ok"},
+            request_id=request_id,
+        )
     def revoke_session(self, *, request_id: str, token: str) -> ApiResponse:
         revoked = self.authentication_service.revoke_session(token)
         return ApiResponse(data={"revoked": revoked}, request_id=request_id)
@@ -795,6 +812,8 @@ class CoreApi:
         )
 
         return ApiResponse(data=assignment, request_id=context.request_id)
+
+
 
 
 

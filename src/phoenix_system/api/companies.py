@@ -1,4 +1,4 @@
-from uuid import UUID
+﻿from uuid import UUID
 
 from fastapi import APIRouter, Request
 
@@ -113,3 +113,32 @@ async def create_system_company_admin_endpoint(
     organisation_id: UUID,
 ):
     return await create_system_company_admin(request, organisation_id)
+
+@router.get("/companies/{organisation_id}/admin/access")
+def system_company_admin_access(
+    request: Request,
+    organisation_id: UUID,
+):
+    from phoenix_system.services.companies import (
+        get_system_company_admin_access,
+    )
+
+    return get_system_company_admin_access(
+        request,
+        organisation_id,
+    )
+
+@router.get("/companies/{organisation_id}/admin")
+def system_company_admin(
+    request: Request,
+    organisation_id: UUID,
+):
+    from phoenix_system.services.companies import (
+        get_system_company_admin,
+    )
+
+    return get_system_company_admin(
+        request,
+        organisation_id,
+    )
+

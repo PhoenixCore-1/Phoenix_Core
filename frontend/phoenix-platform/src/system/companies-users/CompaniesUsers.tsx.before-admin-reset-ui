@@ -1,0 +1,441 @@
+import { useEffect, useState } from 'react'
+import { api } from '../../core/api'
+
+type Company = {
+  id: string
+  code: string
+  name: string
+  status: string
+}
+
+type CompanyUser = {
+  id: string
+  identity_id: string
+  username: string
+  display_name: string
+  user_status: string
+  membership_id: string
+  membership_status: string
+}
+
+function generateTemporaryPassword() {
+  const chars =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%'
+
+  const values = new Uint32Array(16)
+  crypto.getRandomValues(values)
+
+  return Array.from(values, (value) => chars[value % chars.length]).join('')
+}
+
+export function CompaniesUsers() {
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [companyId, setCompanyId] = useState('')
+
+  const [users, setUsers] = useState<CompanyUser[]>([])
+  const [selectedUserId, setSelectedUserId] = useState('')
+
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [password, setPassword] = useState('')
+
+  const [resetMode, setResetMode] = useState<'generate' | 'manual'>(
+    'generate',
+  )
+  const [resetPassword, setResetPassword] = useState('')
+
+  const [loading, setLoading] = useState(true)
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function loadCompanies() {
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const response = await api('/api/v1/system/companies')
+      const items = Array.isArray(response?.items)
+        ? response.items as Company[]
+        : []
+
+      setCompanies(items)
+
+      if (!companyId && items.length > 0) {
+        const activeCompany = items.find(
+          (company) => company.status === 'ACTIVE',
+        )
+        setCompanyId(activeCompany?.id ?? items[0].id)
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load companies.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadUsers(selectedCompanyId: string) {
+    if (!selectedCompanyId) {
+      setUsers([])
+      setSelectedUserId('')
+      return
+    }
+
+    setUsersLoading(true)
+    setMessage('')
+    setSelectedUserId('')
+
+    try {
+      const response = await api(
+        `/api/v1/system/companies/${selectedCompanyId}/users`,
+      )
+
+      const items = Array.isArray(response?.items)
+        ? response.items as CompanyUser[]
+        : []
+
+      setUsers(items)
+    } catch (error) {
+      setUsers([])
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load company users.',
+      )
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadCompanies()
+  }, [])
+
+  useEffect(() => {
+    if (companyId) {
+      void loadUsers(companyId)
+    }
+  }, [companyId])
+
+  async function createCompanyAdmin() {
+    if (!companyId) {
+      setMessage('Please select a company.')
+      return
+    }
+
+    if (!username.trim() || !displayName.trim() || password.length < 12) {
+      setMessage(
+        'Username, display name and a password of at least 12 characters are required.',
+      )
+      return
+    }
+
+    setSaving(true)
+    setMessage('')
+
+    try {
+      await api(
+        `/api/v1/system/companies/${companyId}/admin`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            username: username.trim(),
+            display_name: displayName.trim(),
+            password,
+          }),
+        },
+      )
+
+      setUsername('')
+      setDisplayName('')
+      setPassword('')
+      setMessage('Company Administrator created successfully.')
+
+      await loadUsers(companyId)
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to create Company Administrator.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function resetUserPassword() {
+    if (!companyId || !selectedUserId) {
+      setMessage('Please select a company and user.')
+      return
+    }
+
+    const selectedUser = users.find((user) => user.id === selectedUserId)
+
+    if (!selectedUser) {
+      setMessage('Selected user could not be found.')
+      return
+    }
+
+    let newPassword = resetPassword
+
+    if (resetMode === 'generate') {
+      newPassword = generateTemporaryPassword()
+    }
+
+    if (newPassword.length < 12) {
+      setMessage('Password must be at least 12 characters.')
+      return
+    }
+
+    setResetting(true)
+    setMessage('')
+
+    try {
+      await api(
+        `/api/v1/system/users/${selectedUser.id}/reset-password`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            organisation_id: companyId,
+            password: newPassword,
+          }),
+        },
+      )
+
+      setResetPassword('')
+
+      if (resetMode === 'generate') {
+        setMessage(
+          `Temporary password for ${selectedUser.username}: ${newPassword}`,
+        )
+      } else {
+        setMessage(
+          `Password reset successfully for ${selectedUser.username}.`,
+        )
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to reset user password.',
+      )
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const selectedUser = users.find(
+    (user) => user.id === selectedUserId,
+  )
+
+  return (
+    <section className="page companies-users-page">
+      <div className="page-header">
+        <div>
+          <h1>Companies User</h1>
+          <p>
+            Create and manage users belonging to Phoenix companies.
+          </p>
+        </div>
+      </div>
+
+      {message && (
+        <div className="notice">
+          {message}
+        </div>
+      )}
+
+      <div className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Company Users</h2>
+            <p>
+              Select a company to view its users and manage access credentials.
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <p>Loading companies...</p>
+        ) : (
+          <div className="companies-users-form-grid">
+            <label>
+              <span>Company</span>
+              <select
+                value={companyId}
+                onChange={(event) => setCompanyId(event.target.value)}
+                disabled={saving || resetting}
+              >
+                <option value="">Select company</option>
+                {companies
+                  .filter((company) => company.status === 'ACTIVE')
+                  .map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name} ({company.code})
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {companyId && (
+          <div className="companies-users-list">
+            <h3>Users</h3>
+
+            {usersLoading ? (
+              <p>Loading users...</p>
+            ) : users.length === 0 ? (
+              <p className="muted">
+                No users are currently assigned to this company.
+              </p>
+            ) : (
+              <div className="companies-users-user-list">
+                {users.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    className={
+                      selectedUserId === user.id
+                        ? 'companies-users-user selected'
+                        : 'companies-users-user'
+                    }
+                    onClick={() => setSelectedUserId(user.id)}
+                    disabled={resetting}
+                  >
+                    <strong>{user.display_name}</strong>
+                    <span>{user.username}</span>
+                    <small>{user.user_status}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {selectedUser && (
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Selected User</h2>
+              <p>
+                {selectedUser.display_name} ({selectedUser.username})
+              </p>
+            </div>
+          </div>
+
+          <div className="companies-users-form-grid">
+            <label>
+              <span>Password Reset Method</span>
+              <select
+                value={resetMode}
+                onChange={(event) =>
+                  setResetMode(
+                    event.target.value as 'generate' | 'manual',
+                  )
+                }
+                disabled={resetting}
+              >
+                <option value="generate">
+                  Generate Temporary Password
+                </option>
+                <option value="manual">
+                  Enter Password Manually
+                </option>
+              </select>
+            </label>
+
+            {resetMode === 'manual' && (
+              <label>
+                <span>New Password</span>
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={(event) =>
+                    setResetPassword(event.target.value)
+                  }
+                  disabled={resetting}
+                  autoComplete="new-password"
+                />
+              </label>
+            )}
+          </div>
+
+          <div className="panel-actions">
+            <button
+              type="button"
+              onClick={() => void resetUserPassword()}
+              disabled={resetting}
+            >
+              {resetting ? 'Resetting...' : 'Reset Password'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Create Company Administrator</h2>
+            <p>
+              Create the initial Company Administrator for the selected
+              company.
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <p>Loading companies...</p>
+        ) : (
+          <div className="companies-users-form-grid">
+            <label>
+              <span>Username</span>
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                disabled={saving}
+                autoComplete="off"
+              />
+            </label>
+
+            <label>
+              <span>Display Name</span>
+              <input
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                disabled={saving}
+              />
+            </label>
+
+            <label>
+              <span>Initial Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={saving}
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+        )}
+
+        <div className="panel-actions">
+          <button
+            type="button"
+            onClick={() => void createCompanyAdmin()}
+            disabled={saving || loading || !companyId}
+          >
+            {saving ? 'Creating...' : 'Create Company Administrator'}
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}

@@ -63,6 +63,94 @@ class CompanyUserApplicationService:
             request_id=context.request_id,
         )
 
+    def get_user_access(self, context, user_id: UUID) -> ApiResponse:
+        self.core_api.require_permission(
+            context,
+            "company.roles.manage",
+        )
+
+        user = self.user_service.get_user(user_id)
+
+        memberships = self.membership_service.list_memberships(
+            context.organisation_id,
+        )
+
+        membership = next(
+            (
+                item
+                for item in memberships
+                if item.identity_id == user.identity_id
+                and item.status != "REMOVED"
+            ),
+            None,
+        )
+
+        if not membership:
+            raise AuthorizationError(
+                "User does not belong to the current organisation."
+            )
+
+        # Company Admins are owned by the System Platform.
+        if getattr(user, "platform_level", None) == "COMPANY_ADMIN":
+            raise AuthorizationError(
+                "Company Admin access is managed by the System Platform."
+            )
+
+        roles = self.core_api.role_service.list_assigned_roles(
+            membership.id
+        )
+
+        permissions = []
+
+        for role in roles:
+            role_permissions = self.core_api.role_service.list_role_permissions(
+                role.id
+            )
+
+            for permission in role_permissions:
+                permissions.append(
+                    {
+                        "id": str(permission.id),
+                        "code": permission.code,
+                        "name": permission.name,
+                    }
+                )
+
+        unique_permissions = {
+            item["id"]: item
+            for item in permissions
+        }
+
+        return ApiResponse(
+            data={
+                "user": {
+                    "id": str(user.id),
+                    "identity_id": str(user.identity_id),
+                    "username": user.username,
+                    "display_name": user.display_name,
+                    "status": user.status,
+                },
+                "membership": {
+                    "id": str(membership.id),
+                    "status": membership.status,
+                },
+                "roles": [
+                    {
+                        "id": str(role.id),
+                        "code": role.code,
+                        "name": role.name,
+                        "scope": role.scope,
+                        "status": role.status,
+                    }
+                    for role in roles
+                ],
+                "permissions": sorted(
+                    unique_permissions.values(),
+                    key=lambda item: item["code"],
+                ),
+            },
+            request_id=context.request_id,
+        )
     def update_user(
         self,
         context,
@@ -163,10 +251,30 @@ class CompanyUserApplicationService:
         )
 
         items = []
+
         for membership in memberships:
+            platform_row = self.user_service.db.execute(
+                """
+                SELECT platform_level
+                FROM users
+                WHERE identity_id=?
+                """,
+                (str(membership.identity_id),),
+            ).fetchone()
+
+            # Company Admins are provisioned and managed from
+            # the System Platform. They are not ordinary
+            # Company Platform users.
+            if (
+                platform_row
+                and platform_row["platform_level"] == "COMPANY_ADMIN"
+            ):
+                continue
+
             user = self.user_service.get_user_by_identity(
                 membership.identity_id
             )
+
             items.append(
                 {
                     "id": str(user.id),
@@ -210,68 +318,6 @@ class CompanyUserApplicationService:
             },
             request_id=context.request_id,
         )
-
-    def list_users(self, context) -> ApiResponse:
-        self.core_api.require_permission(
-            context,
-            "company.memberships.manage",
-        )
-
-        memberships = self.membership_service.list_memberships(
-            context.organisation_id
-        )
-
-        items = []
-        for membership in memberships:
-            user = self.user_service.get_user_by_identity(
-                membership.identity_id
-            )
-            items.append(
-                {
-                    "id": str(user.id),
-                    "identity_id": str(user.identity_id),
-                    "username": user.username,
-                    "display_name": user.display_name,
-                    "user_status": user.status,
-                    "membership_id": str(membership.id),
-                    "membership_status": membership.status,
-                    "created_at": user.created_at.isoformat(),
-                }
-            )
-
-        return ApiResponse(
-            data={"items": items},
-            request_id=context.request_id,
-        )
-
-    def list_memberships(self, context) -> ApiResponse:
-        self.core_api.require_permission(
-            context,
-            "company.memberships.manage",
-        )
-
-        items = self.membership_service.list_memberships(
-            context.organisation_id
-        )
-
-        return ApiResponse(
-            data={
-                "items": [
-                    {
-                        "id": str(item.id),
-                        "identity_id": str(item.identity_id),
-                        "organisation_id": str(item.organisation_id),
-                        "status": item.status,
-                        "created_at": item.created_at.isoformat(),
-                    }
-                    for item in items
-                ]
-            },
-            request_id=context.request_id,
-        )
-
-
-
 
 
 

@@ -1,0 +1,193 @@
+﻿import { useEffect, useState } from 'react'
+import { api } from '../../core/api'
+
+type Company = {
+  id: string
+  code: string
+  name: string
+  status: string
+}
+
+export function CompaniesUsers() {
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [companyId, setCompanyId] = useState('')
+
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [password, setPassword] = useState('')
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function loadCompanies() {
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const response = await api('/api/v1/system/companies')
+      const items = Array.isArray(response?.items)
+        ? response.items as Company[]
+        : []
+
+      setCompanies(items)
+
+      if (!companyId && items.length > 0) {
+        const activeCompany = items.find(
+          (company) => company.status === 'ACTIVE',
+        )
+        setCompanyId(activeCompany?.id ?? items[0].id)
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load companies.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadCompanies()
+  }, [])
+
+  async function createCompanyAdmin() {
+    if (!companyId) {
+      setMessage('Please select a company.')
+      return
+    }
+
+    if (!username.trim() || !displayName.trim() || password.length < 12) {
+      setMessage(
+        'Username, display name and a password of at least 12 characters are required.',
+      )
+      return
+    }
+
+    setSaving(true)
+    setMessage('')
+
+    try {
+      await api(
+        `/api/v1/system/companies/${companyId}/admin`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            username: username.trim(),
+            display_name: displayName.trim(),
+            password,
+          }),
+        },
+      )
+
+      setUsername('')
+      setDisplayName('')
+      setPassword('')
+      setMessage('Company Administrator created successfully.')
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to create Company Administrator.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="page">
+      <div className="page-header">
+        <div>
+          <h1>Companies User</h1>
+          <p>
+            Create and manage users belonging to Phoenix companies.
+          </p>
+        </div>
+      </div>
+
+      {message && (
+        <div className="notice">
+          {message}
+        </div>
+      )}
+
+      <div className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Create Company Administrator</h2>
+            <p>
+              The administrator will be assigned to the selected company.
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <p>Loading companies...</p>
+        ) : (
+          <div className="form-grid">
+            <label>
+              <span>Company</span>
+              <select
+                value={companyId}
+                onChange={(event) => setCompanyId(event.target.value)}
+                disabled={saving}
+              >
+                <option value="">Select company</option>
+                {companies
+                  .filter((company) => company.status === 'ACTIVE')
+                  .map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name} ({company.code})
+                    </option>
+                  ))}
+              </select>
+            </label>
+
+            <label>
+              <span>Username</span>
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                disabled={saving}
+                autoComplete="off"
+              />
+            </label>
+
+            <label>
+              <span>Display Name</span>
+              <input
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                disabled={saving}
+              />
+            </label>
+
+            <label>
+              <span>Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={saving}
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+        )}
+
+        <div className="panel-actions">
+          <button
+            type="button"
+            onClick={() => void createCompanyAdmin()}
+            disabled={saving || loading || !companyId}
+          >
+            {saving ? 'Creating...' : 'Create Company Administrator'}
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}

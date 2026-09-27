@@ -63,3 +63,59 @@ def list_system_modules(request: Request):
             "items": [dict(row) for row in rows]
         }
     }
+
+def enable_system_module(request: Request, module_id):
+    api, user, _org = _session_context(request)
+
+    _require_system_admin(user)
+
+    module = api.module_service.enable(module_id)
+
+    return {
+        "data": {
+            "id": str(module.id),
+            "code": module.code,
+            "name": module.name,
+            "version": module.version,
+            "status": module.status,
+            "created_at": module.created_at.isoformat(),
+        }
+    }
+
+
+def disable_system_module(request: Request, module_id):
+    api, user, _org = _session_context(request)
+
+    _require_system_admin(user)
+
+    module = api.module_service.disable(module_id)
+
+    return {
+        "data": {
+            "id": str(module.id),
+            "code": module.code,
+            "name": module.name,
+            "version": module.version,
+            "status": module.status,
+            "created_at": module.created_at.isoformat(),
+        }
+    }
+
+
+def retire_system_module(request: Request, module_id):
+    api, user, _org = _session_context(request)
+
+    _require_system_admin(user)
+
+    module = api.module_service.retire(module_id)
+
+    return {
+        "data": {
+            "id": str(module.id),
+            "code": module.code,
+            "name": module.name,
+            "version": module.version,
+            "status": module.status,
+            "created_at": module.created_at.isoformat(),
+        }
+    }

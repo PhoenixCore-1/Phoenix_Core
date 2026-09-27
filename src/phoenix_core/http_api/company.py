@@ -1,4 +1,4 @@
-"""Company Platform HTTP endpoints backed by Phoenix Core authority."""
+﻿"""Company Platform HTTP endpoints backed by Phoenix Core authority."""
 
 from uuid import UUID
 
@@ -134,6 +134,18 @@ async def remove_membership(request: Request, membership_id: UUID):
     return {"data": result.data, "request_id": result.request_id}
 
 
+@router.get("/users/{user_id}/access")
+async def user_access(request: Request, user_id: UUID):
+    context = await resolve_request_context(request)
+    result = _user_service(request).get_user_access(
+        context,
+        user_id,
+    )
+    return {
+        "data": result.data,
+        "request_id": result.request_id,
+    }
+
 @router.get("/roles")
 async def roles(request: Request):
     context = await resolve_request_context(request)
@@ -209,6 +221,15 @@ async def assign_role(request: Request, membership_id: UUID, role_id: UUID):
     return {"data": result.data, "request_id": result.request_id}
 
 
+@router.get("/memberships/{membership_id}/roles")
+async def membership_roles(request: Request, membership_id: UUID):
+    context = await resolve_request_context(request)
+    data = _role_query_service(request).list_membership_roles(
+        context,
+        membership_id,
+    )
+    return {"data": data, "request_id": context.request_id}
+
 @router.delete("/memberships/{membership_id}/roles/{role_id}")
 async def remove_role(request: Request, membership_id: UUID, role_id: UUID):
     context = await resolve_request_context(request)
@@ -221,3 +242,4 @@ async def permissions(request: Request):
     context = await resolve_request_context(request)
     data = _role_query_service(request).list_permissions(context)
     return {"data": data, "request_id": context.request_id}
+

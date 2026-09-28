@@ -1,9 +1,10 @@
-﻿import { StrictMode, useEffect, useState } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { NavLink, Outlet } from 'react-router'
 import './styles.css'
 import { AppRoutes } from './app/AppRoutes'
 import { SystemHome } from './system/home/SystemHome'
+import Roles from './company/roles/Roles'
 import { api as coreApi } from './core/api'
 import {
   PlatformProvider,
@@ -511,7 +512,7 @@ function Login() {
             Phoenix Core Platform V1.0.0
           </span>
 
-          <b>Ã¯Â¿Â½</b>
+          <b>ï¿½</b>
 
           <span>
             Secure access
@@ -1120,7 +1121,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                Ã¯Â¿Â½
+                ï¿½
               </button>
             </div>
 
@@ -1766,7 +1767,7 @@ function CompanyShell({
               setView('home')
             }
           >
-            <span className="company-nav-icon">Ã¯Â¿Â½</span>
+            <span className="company-nav-icon">ï¿½</span>
             Home
           </button>
 
@@ -1893,7 +1894,7 @@ function CompanyShell({
                         setNotificationsOpen(false)
                       }
                     >
-                      Ã¯Â¿Â½
+                      ï¿½
                     </button>
                   </div>
 
@@ -2029,7 +2030,10 @@ function CompanyShell({
             <CompanyUsers />
           )}
 
-          {selectedPlaceholder && (
+          {view === 'roles' && (
+            <Roles />
+          )}
+          {selectedPlaceholder && view !== 'roles' && (
             <Placeholder
               eyebrow={selectedPlaceholder.eyebrow}
               title={selectedPlaceholder.title}
@@ -2166,7 +2170,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} Ã¯Â¿Â½ v{module.version}
+                      {module.code} ï¿½ v{module.version}
                     </span>
                   </div>
 
@@ -2668,7 +2672,7 @@ const [accessLoading, setAccessLoading] =
                 setMessage('')
               }}
             >
-              ← Back to Users
+              ? Back to Users
             </button>
 
             <div className="company-user-detail-profile">
@@ -2971,7 +2975,7 @@ const [accessLoading, setAccessLoading] =
             className="small-btn"
             onClick={() => setShowUserDetail(false)}
           >
-            ← Back to Users
+            ? Back to Users
           </button>
         </div>
       )}
@@ -3006,7 +3010,7 @@ const [accessLoading, setAccessLoading] =
                   setShowAdd(false)
                 }
               >
-                Ã¯Â¿Â½
+                ï¿½
               </button>
             </div>
 
@@ -3410,64 +3414,3 @@ createRoot(rootElement).render(
     </PlatformProvider>
   </StrictMode>,
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

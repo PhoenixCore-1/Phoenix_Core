@@ -1,4 +1,4 @@
-from uuid import UUID
+﻿from uuid import UUID
 
 from phoenix_core.api.contracts import ApiResponse
 from phoenix_core.errors import AuthorizationError
@@ -199,6 +199,63 @@ class CompanyUserApplicationService:
             request_id=context.request_id,
         )
 
+    def reset_password(
+        self,
+        context,
+        user_id: UUID,
+        new_password: str,
+    ) -> ApiResponse:
+        self.core_api.require_permission(context, "company.users.manage")
+
+        if not new_password or len(new_password) < 12:
+            raise ValueError("Password must be at least 12 characters.")
+
+        user = self.user_service.get_user(user_id)
+
+        memberships = self.membership_service.list_memberships(
+            context.organisation_id
+        )
+
+        membership = next(
+            (
+                item
+                for item in memberships
+                if item.identity_id == user.identity_id
+                and item.status != "REMOVED"
+            ),
+            None,
+        )
+
+        if not membership:
+            raise AuthorizationError(
+                "User does not belong to the current organisation."
+            )
+
+        # Company Admins are owned by the System Platform.
+        if getattr(user, "platform_level", None) == "COMPANY_ADMIN":
+            raise AuthorizationError(
+                "Company Admin access is managed by the System Platform."
+            )
+
+        self.core_api.authentication_service.admin_reset_password(
+            user_id,
+            new_password,
+        )
+
+        self.core_api._audit(
+            context,
+            action="COMPANY_USER_PASSWORD_RESET",
+            target_type="USER",
+            target_id=user.id,
+        )
+
+        return ApiResponse(
+            data={
+                "user_id": str(user.id),
+                "password_reset_required": True,
+            },
+            request_id=context.request_id,
+        )
     def set_membership_status(
         self,
         context,
@@ -284,6 +341,11 @@ class CompanyUserApplicationService:
                     "user_status": user.status,
                     "membership_id": str(membership.id),
                     "membership_status": membership.status,
+                    "platform_level": (
+                        platform_row["platform_level"]
+                        if platform_row
+                        else None
+                    ),
                     "created_at": user.created_at.isoformat(),
                 }
             )
@@ -318,6 +380,8 @@ class CompanyUserApplicationService:
             },
             request_id=context.request_id,
         )
+
+
 
 
 

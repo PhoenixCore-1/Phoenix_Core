@@ -1,4 +1,4 @@
-"""Phoenix Production HTTP API.
+﻿"""Phoenix Production HTTP API.
 
 HTTP transport only. Production business rules remain in the
 Production module and persistence remains authoritative in Core.
@@ -9,6 +9,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Request
 
+from phoenix_core.errors import ValidationError
+
 from phoenix_core.http_api.authorization import (
     require_entitlement,
     require_permission,
@@ -17,6 +19,7 @@ from phoenix_production_module.production.service import ProductionService
 from phoenix_production_module.production.integration import (
     _load_domain_order,
     get_eta_operational_snapshot,
+    release_order,
 )
 
 
@@ -24,6 +27,156 @@ router = APIRouter(
     prefix="/api/v1/production",
     tags=["Production"],
 )
+
+
+@router.post("/orders")
+@require_entitlement("production")
+@require_permission("production.view")
+async def create_production_order(request: Request):
+    """Create a new Planned Production 360 order."""
+    db = _db(request)
+    context = request.state.core_context
+
+    payload = await request.json()
+    purpose = str(payload.get("purpose", "")).strip()
+    product_ref = str(payload.get("product_ref", "")).strip()
+    product_description = payload.get("product_description")
+    quantity_ordered = payload.get("quantity_ordered")
+    priority = str(payload.get("priority", "Normal")).strip() or "Normal"
+    required_date = payload.get("required_date")
+    if not purpose:
+        raise ValidationError("purpose is required.")
+
+    if not product_ref:
+        raise ValidationError("product_ref is required.")
+
+    try:
+        quantity_ordered = float(quantity_ordered)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("quantity_ordered must be a number.") from exc
+
+    if quantity_ordered <= 0:
+        raise ValidationError("quantity_ordered must be greater than zero.")
+
+    organisation_id = str(context.organisation_id)
+    created_by = str(context.identity_id)
+
+    now = datetime.utcnow().isoformat()
+    order_year = datetime.utcnow().year
+
+    try:
+        db.execute("BEGIN IMMEDIATE")
+
+        sequence_row = db.execute(
+            """
+            SELECT COALESCE(
+                MAX(CAST(SUBSTR(order_number, 9) AS INTEGER)),
+                0
+            ) AS last_sequence
+            FROM production_orders
+            WHERE organisation_id=?
+              AND order_number LIKE ?
+            """,
+            (
+                organisation_id,
+                f"PO-{order_year}-%",
+            ),
+        ).fetchone()
+
+        next_sequence = int(sequence_row["last_sequence"]) + 1
+        order_number = f"PO-{order_year}-{next_sequence:06d}"
+
+        cursor = db.execute(
+            """
+            INSERT INTO production_orders (
+                organisation_id,
+                order_number,
+                purpose,
+                product_ref,
+                product_description,
+                quantity_ordered,
+                priority,
+                status,
+                required_date,
+                created_by,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Planned', ?, ?, ?, ?)
+            """,
+            (
+                organisation_id,
+                order_number,
+                purpose,
+                product_ref,
+                product_description,
+                quantity_ordered,
+                priority,
+                required_date,
+                created_by,
+                now,
+                now,
+            ),
+        )
+
+        production_order_id = cursor.lastrowid
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    row = db.execute(
+        """
+        SELECT
+            production_order_id,
+            organisation_id,
+            order_number,
+            purpose,
+            product_ref,
+            product_description,
+            quantity_ordered,
+            priority,
+            status,
+            required_date,
+            created_by,
+            created_at,
+            updated_at
+        FROM production_orders
+        WHERE production_order_id=?
+          AND organisation_id=?
+        """,
+        (
+            production_order_id,
+            organisation_id,
+        ),
+    ).fetchone()
+
+    return {"data": dict(row)}
+
+
+
+@router.post("/orders/{production_order_id}/release")
+@require_entitlement("production")
+@require_permission("production.order.release")
+async def release_production_order(
+    request: Request,
+    production_order_id: int,
+):
+    """Release a Planned Production 360 order to production."""
+
+    db = _db(request)
+    context = request.state.core_context
+
+    result = release_order(
+        db,
+        organisation_id=str(context.organisation_id),
+        production_order_id=production_order_id,
+        recorded_by=str(context.identity_id),
+    )
+
+    return {"data": result}
 
 
 def _db(request: Request):
@@ -67,7 +220,7 @@ def _operational_orders(
     end_at: Optional[datetime],
 ):
     sql = """
-        SELECT production_order_id
+        SELECT production_order_id, order_number
         FROM production_orders
         WHERE organisation_id=?
     """
@@ -119,6 +272,7 @@ def _operational_orders(
         orders.append(
             {
                 "production_order_id": production_order_id,
+                "order_number": row["order_number"],
                 "status": order.state.value,
                 "planned_quantity": str(order.planned_quantity),
                 "required_date": (
@@ -194,4 +348,11 @@ async def operational_snapshot(
         },
         "request_id": context.request_id,
     }
+
+
+
+
+
+
+
 

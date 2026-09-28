@@ -100,6 +100,22 @@ async def create_user(request: Request):
     return {"data": result.data, "request_id": result.request_id}
 
 
+@router.post("/users/{user_id}/reset-password")
+async def reset_user_password(request: Request, user_id: UUID):
+    context = await resolve_request_context(request)
+    payload = await request.json()
+
+    result = _user_service(request).reset_password(
+        context,
+        user_id,
+        payload.get("password"),
+    )
+
+    return {
+        "data": result.data,
+        "request_id": result.request_id,
+    }
+
 @router.patch("/users/{user_id}")
 async def update_user(request: Request, user_id: UUID):
     context = await resolve_request_context(request)
@@ -242,4 +258,5 @@ async def permissions(request: Request):
     context = await resolve_request_context(request)
     data = _role_query_service(request).list_permissions(context)
     return {"data": data, "request_id": context.request_id}
+
 

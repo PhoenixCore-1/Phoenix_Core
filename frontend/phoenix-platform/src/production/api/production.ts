@@ -41,6 +41,44 @@ export interface ProductionOperationalSnapshot {
   order_count: number
 }
 
+export interface CreateProductionOrderRequest {
+  order_number: string
+  purpose: string
+  product_ref: string
+  product_description?: string
+  quantity_ordered: number
+  priority?: string
+  required_date?: string
+}
+
+export interface CreatedProductionOrder {
+  production_order_id: number
+  organisation_id: string
+  order_number: string
+  purpose: string
+  product_ref: string
+  product_description: string | null
+  quantity_ordered: number
+  priority: string
+  status: string
+  required_date: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export async function createProductionOrder(
+  request: CreateProductionOrderRequest,
+): Promise<CreatedProductionOrder> {
+  return api<CreatedProductionOrder>(
+    '/api/v1/production/orders',
+    {
+      method: 'POST',
+      body: JSON.stringify(request),
+    },
+  )
+}
+
 export async function getProductionOperationalSnapshot(
   startAt?: string,
   endAt?: string,
@@ -55,4 +93,7 @@ export async function getProductionOperationalSnapshot(
 
   return api<ProductionOperationalSnapshot>(path)
 }
+
+
+
 

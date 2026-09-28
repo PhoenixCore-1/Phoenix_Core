@@ -133,3 +133,83 @@ def test_operational_snapshot_authorization_order(
     # Authorization completed successfully. The request may fail
     # later because this test intentionally has no production DB.
     assert response.status_code in (200, 500)
+
+
+def test_release_order_requires_release_permission(
+    monkeypatch,
+):
+    app = create_development_app()
+    context = _context()
+
+    context.identity_id = "test-identity"
+
+    _configure_context(monkeypatch, app, context)
+
+    def allow_entitlement(context, entitlement):
+        assert entitlement == "production"
+
+    monkeypatch.setattr(
+        app.state.core_api,
+        "require_entitlement",
+        allow_entitlement,
+    )
+
+    def deny_permission(context, permission):
+        assert permission == "production.order.release"
+        raise AuthorizationError(
+            "Production order release permission required"
+        )
+
+    monkeypatch.setattr(
+        app.state.core_api,
+        "require_permission",
+        deny_permission,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/production/orders/1/release"
+    )
+
+    assert response.status_code == 403
+
+
+def test_release_order_authorization_order(
+    monkeypatch,
+):
+    app = create_development_app()
+    context = _context()
+    context.identity_id = "test-identity"
+    calls = []
+
+    _configure_context(monkeypatch, app, context)
+
+    def entitlement(context, entitlement):
+        calls.append(("entitlement", entitlement))
+
+    def permission(context, permission):
+        calls.append(("permission", permission))
+
+    monkeypatch.setattr(
+        app.state.core_api,
+        "require_entitlement",
+        entitlement,
+    )
+
+    monkeypatch.setattr(
+        app.state.core_api,
+        "require_permission",
+        permission,
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/production/orders/1/release"
+    )
+
+    assert calls == [
+        ("entitlement", "production"),
+        ("permission", "production.order.release"),
+    ]
+
+    # Authorization completed successfully. The request may fail
+    # later because this test intentionally has no production DB.
+    assert response.status_code in (200, 404, 500)

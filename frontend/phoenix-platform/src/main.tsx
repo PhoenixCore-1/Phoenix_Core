@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react'
+﻿import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { NavLink, Outlet } from 'react-router'
 import './styles.css'
@@ -511,7 +511,7 @@ function Login() {
             Phoenix Core Platform V1.0.0
           </span>
 
-          <b>ï¿½</b>
+          <b>Ã¯Â¿Â½</b>
 
           <span>
             Secure access
@@ -742,28 +742,6 @@ function SystemUsers() {
     }
   }
 
-  const loadRoles = async () => {
-    try {
-      const data = await api('/api/v1/company/roles')
-      const items = Array.isArray(data)
-        ? data
-        : data.data || data.items || []
-
-      setRoles(
-        items.filter(
-          (role: any) =>
-            role.status === 'ACTIVE' &&
-            role.code !== 'COMPANY.ADMIN',
-        ),
-      )
-    } catch (roleError) {
-      setMessage(
-        roleError instanceof Error
-          ? roleError.message
-          : 'Unable to load roles.',
-      )
-    }
-  }
 
   useEffect(() => {
     const timer = window.setTimeout(
@@ -1142,7 +1120,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                ï¿½
+                Ã¯Â¿Â½
               </button>
             </div>
 
@@ -1788,7 +1766,7 @@ function CompanyShell({
               setView('home')
             }
           >
-            <span className="company-nav-icon">ï¿½</span>
+            <span className="company-nav-icon">Ã¯Â¿Â½</span>
             Home
           </button>
 
@@ -1915,7 +1893,7 @@ function CompanyShell({
                         setNotificationsOpen(false)
                       }
                     >
-                      ï¿½
+                      Ã¯Â¿Â½
                     </button>
                   </div>
 
@@ -2188,7 +2166,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} ï¿½ v{module.version}
+                      {module.code} Ã¯Â¿Â½ v{module.version}
                     </span>
                   </div>
 
@@ -2294,34 +2272,115 @@ function CompanyUsers() {
 
   const [selectedUserId, setSelectedUserId] =
     useState<string | null>(null)
+  const [showUserDetail, setShowUserDetail] =
+    useState(false)
 
   const [userAccess, setUserAccess] =
     useState<any | null>(null)
-
-  const [showUserAccess, setShowUserAccess] =
+const [accessLoading, setAccessLoading] =
+    useState(false)
+  const [passwordResetting, setPasswordResetting] =
     useState(false)
 
-  const [accessLoading, setAccessLoading] =
+  const [passwordMode, setPasswordMode] =
+    useState<'generated' | 'manual'>('generated')
+
+  const [resetPassword, setResetPassword] =
+    useState('')
+
+  const [showResetPassword, setShowResetPassword] =
     useState(false)
 
-  const viewUserAccess = async () => {
+  const [copiedPassword, setCopiedPassword] =
+    useState(false)
+
+  const generateTemporaryPassword = () => {
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%'
+
+    const values = new Uint32Array(16)
+    crypto.getRandomValues(values)
+
+    return Array.from(
+      values,
+      (value) => chars[value % chars.length],
+    ).join('')
+  }
+
+  const prepareGeneratedPassword = () => {
+    setResetPassword(generateTemporaryPassword())
+    setShowResetPassword(true)
+    setCopiedPassword(false)
+    setMessage('')
+  }
+
+  const resetUserPassword = async () => {
     if (!selectedUserId) {
       return
     }
 
+    if (!resetPassword || resetPassword.length < 12) {
+      setMessage('Password must be at least 12 characters.')
+      return
+    }
+
+    setPasswordResetting(true)
+    setMessage('')
+    setCopiedPassword(false)
+
+    try {
+      await api(
+        `/api/v1/company/users/${selectedUserId}/reset-password`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            password: resetPassword,
+          }),
+        },
+      )
+
+      setMessage(
+        'Password reset successfully. The user must change it at next sign-in.',
+      )
+    } catch (passwordError) {
+      setMessage(
+        passwordError instanceof Error
+          ? passwordError.message
+          : 'Unable to reset the user password.',
+      )
+    } finally {
+      setPasswordResetting(false)
+    }
+  }
+
+  const copyResetPassword = async () => {
+    if (!resetPassword) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(resetPassword)
+      setCopiedPassword(true)
+      setMessage('Password copied to clipboard.')
+    } catch {
+      setMessage('Unable to copy the password.')
+    }
+  }
+
+  const loadUserAccess = async (
+    userId: string,
+  ) => {
     setAccessLoading(true)
     setMessage('')
 
     try {
       const data = await api(
-        `/api/v1/company/users/${selectedUserId}/access`,
+        `/api/v1/company/users/${userId}/access`,
       )
 
       setUserAccess(
         data.data || data,
       )
-
-      setShowUserAccess(true)
     } catch (accessError) {
       setMessage(
         accessError instanceof Error
@@ -2332,18 +2391,10 @@ function CompanyUsers() {
       setAccessLoading(false)
     }
   }
-
   const [search, setSearch] =
     useState('')
 
   const [showAdd, setShowAdd] =
-    useState(false)
-  const [roles, setRoles] =
-    useState<any[]>([])
-
-  const [selectedRoleId, setSelectedRoleId] =
-    useState('')
-  const [roleAssigning, setRoleAssigning] =
     useState(false)
   const [form, setForm] =
     useState({
@@ -2373,12 +2424,6 @@ function CompanyUsers() {
 
       setUsers(items)
 
-      if (
-        !selectedUserId &&
-        items.length > 0
-      ) {
-        setSelectedUserId(items[0].id)
-      }
     } catch (loadError) {
       setMessage(
         loadError instanceof Error
@@ -2388,64 +2433,10 @@ function CompanyUsers() {
     }
   }
 
-  const loadRoles = async () => {
-    try {
-      const data = await api('/api/v1/company/roles')
-      const items = Array.isArray(data)
-        ? data
-        : data.data?.items || data.items || []
-
-      setRoles(
-        items.filter(
-          (role: any) =>
-            role.status === 'ACTIVE' &&
-            role.code !== 'COMPANY.ADMIN',
-        ),
-      )
-    } catch (roleError) {
-      setMessage(
-        roleError instanceof Error
-          ? roleError.message
-          : 'Unable to load roles.',
-      )
-    }
-  }
 
 
-  const assignRole = async () => {
-    if (!selectedUser?.membership_id || !selectedRoleId) {
-      return
-    }
-
-    setRoleAssigning(true)
-    setMessage('')
-
-    try {
-      await api(
-        `/api/v1/company/memberships/${selectedUser.membership_id}/roles/${selectedRoleId}`,
-        { method: 'POST' },
-      )
-
-      const data = await api(
-        `/api/v1/company/users/${selectedUser.id}/access`,
-      )
-
-      setUserAccess(data.data || data)
-      setSelectedRoleId('')
-      setMessage('Role assigned successfully.')
-    } catch (roleError) {
-      setMessage(
-        roleError instanceof Error
-          ? roleError.message
-          : 'Unable to assign role.',
-      )
-    } finally {
-      setRoleAssigning(false)
-    }
-  }
   useEffect(() => {
     void load()
-    void loadRoles()
   }, [])
 
   const add = async () => {
@@ -2549,233 +2540,441 @@ function CompanyUsers() {
         </div>
       )}
 
-      <div className="company-users-layout">
-        <div className="panel company-users-list-panel">
-          <div className="company-panel-heading">
+      {!showUserDetail ? (
+        <div className="panel company-users-table-panel">
+          <div className="company-users-list-header">
             <div>
               <span className="eyebrow">
-                USERS
+                COMPANY USERS
               </span>
 
-              <h3>
-                Company users
-              </h3>
+              <h2>
+                Users
+              </h2>
             </div>
 
-            <span className="company-count-badge">
-              {filteredUsers.length}
-            </span>
+            <div className="company-user-search">
+              <input
+                type="search"
+                placeholder="Search users..."
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+              />
+            </div>
           </div>
 
-          <div className="company-user-search">
-            <span>?</span>
+          <div className="company-users-table-wrap">
+            <table className="company-users-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Username</th>
+                  <th>Account Status</th>
+                  <th>Membership</th>
+                  <th>Platform Level</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
 
-            <input
-              type="search"
-              placeholder="Search users..."
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-            />
-          </div>
+              <tbody>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="company-users-empty"
+                    >
+                      No users found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <div className="company-user-table-name">
+                          <span className="company-user-avatar">
+                            {String(
+                              user.display_name ||
+                                user.username ||
+                                '?',
+                            )
+                              .trim()
+                              .charAt(0)
+                              .toUpperCase()}
+                          </span>
 
-          <div className="company-user-list">
-            {filteredUsers.length === 0 && (
-              <div className="company-empty-state">
-                <strong>
-                  No users found
-                </strong>
+                          <strong>
+                            {user.display_name ||
+                              user.username}
+                          </strong>
+                        </div>
+                      </td>
 
-                <span>
-                  Try another search or add a
-                  new company user.
-                </span>
-              </div>
-            )}
+                      <td>
+                        @{user.username}
+                      </td>
 
-            {filteredUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                className={
-                  user.id === selectedUserId
-                    ? 'company-user-row selected'
-                    : 'company-user-row'
-                }
-                onClick={() =>
-                  setSelectedUserId(user.id)
-                }
-              >
-                <span className="company-user-avatar">
-                  {String(
-                    user.display_name ||
-                      user.username ||
-                      '?',
-                  )
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
+                      <td>
+                        <span className="status-pill">
+                          {user.user_status}
+                        </span>
+                      </td>
 
-                <span className="company-user-row-main">
-                  <strong>
-                    {user.display_name}
-                  </strong>
+                      <td>
+                        {user.membership_status}
+                      </td>
 
-                  <span>
-                    @{user.username}
-                  </span>
-                </span>
+                      <td>
+                        {user.platform_level}
+                      </td>
 
-                <span
-                  className={
-                    String(user.status)
-                      .toUpperCase() ===
-                    'ACTIVE'
-                      ? 'company-status-pill active'
-                      : 'company-status-pill'
-                  }
-                >
-                  {user.status}
-                </span>
-              </button>
-            ))}
+                      <td>
+                        <button
+                          type="button"
+                          className="small-btn"
+                          onClick={() => {
+                            setSelectedUserId(user.id)
+                            setShowUserDetail(true)
+                            setUserAccess(null)
+                            setPasswordMode('generated')
+                            setResetPassword(
+                              generateTemporaryPassword(),
+                            )
+                            setShowResetPassword(false)
+                            setCopiedPassword(false)
+                            void loadUserAccess(user.id)
+                            setMessage('')
+                          }}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
+      ) : selectedUser ? (
+        <div className="panel company-user-detail-view">
+          <div className="company-user-detail-header">
+            <button
+              type="button"
+              className="small-btn"
+              onClick={() => {
+                setShowUserDetail(false)
+                setMessage('')
+              }}
+            >
+              ← Back to Users
+            </button>
 
-        <div className="panel company-user-details-panel">
-          {!selectedUser && (
-            <div className="company-empty-details">
+            <div className="company-user-detail-profile">
+              <span className="company-user-avatar">
+                {String(
+                  selectedUser.display_name ||
+                    selectedUser.username ||
+                    '?',
+                )
+                  .trim()
+                  .charAt(0)
+                  .toUpperCase()}
+              </span>
+
               <div>
                 <span className="eyebrow">
                   USER DETAILS
                 </span>
 
-                <h3>
-                  Select a user
-                </h3>
+                <h2>
+                  {selectedUser.display_name}
+                </h2>
 
-                <p className="muted">
-                  Select a company user to view
-                  their account information.
+                <p>
+                  @{selectedUser.username}
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="company-user-status-strip">
+            <div>
+              <span className="field-label">
+                Account status
+              </span>
+
+              <strong>
+                {selectedUser.user_status}
+              </strong>
+            </div>
+
+            <div>
+              <span className="field-label">
+                Company membership
+              </span>
+
+              <strong>
+                {selectedUser.membership_status}
+              </strong>
+            </div>
+
+            <div>
+              <span className="field-label">
+                Platform level
+              </span>
+
+              <strong>
+                {selectedUser.platform_level}
+              </strong>
+            </div>
+          </div>
+
+          <div className="company-user-detail-section">
+            <span className="eyebrow">
+              ACCOUNT
+            </span>
+
+            <div className="company-detail-grid">
+              <div>
+                <span className="field-label">
+                  Username
+                </span>
+
+                <strong>
+                  {selectedUser.username}
+                </strong>
+              </div>
+
+              <div>
+                <span className="field-label">
+                  Display name
+                </span>
+
+                <strong>
+                  {selectedUser.display_name}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {accessLoading && (
+            <div className="company-feedback">
+              Loading user access...
+            </div>
           )}
 
-          {selectedUser && (
+          {userAccess && (
             <>
-              <div className="company-user-profile-heading">
-                <span className="company-user-avatar large">
-                  {String(
-                    selectedUser.display_name ||
-                      selectedUser.username ||
-                      '?',
-                  )
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase()}
-                </span>
-
-                <div>
-                  <span className="eyebrow">
-                    USER DETAILS
-                  </span>
-
-                  <h2>
-                    {selectedUser.display_name}
-                  </h2>
-
-                  <p>
-                    @{selectedUser.username}
-                  </p>
-                </div>
-              </div>
-
-              <div className="company-user-status-strip">
-                <div>
-                  <span className="field-label">
-                    Account status
-                  </span>
-
-                  <strong>
-                    {selectedUser.status}
-                  </strong>
-                </div>
-
-                <div>
-                  <span className="field-label">
-                    Company membership
-                  </span>
-
-                  <strong>
-                    {selectedUser.membership_status}
-                  </strong>
-                </div>
-
-                <div>
-                  <span className="field-label">
-                    Platform level
-                  </span>
-
-                  <strong>
-                    {selectedUser.platform_level}
-                  </strong>
-                </div>
-              </div>
-
               <div className="company-user-detail-section">
-                <span className="eyebrow">
-                  ACCOUNT
-                </span>
+                <div className="section-heading-row">
+                  <span className="eyebrow">
+                    ASSIGNED ROLES
+                  </span>
 
-                <div className="company-detail-grid">
-                  <div>
-                    <span className="field-label">
-                      Username
-                    </span>
-
-                    <strong>
-                      {selectedUser.username}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span className="field-label">
-                      Display name
-                    </span>
-
-                    <strong>
-                      {selectedUser.display_name}
-                    </strong>
-                  </div>
+                  <span className="muted">
+                    Read-only
+                  </span>
                 </div>
+
+                {userAccess.roles?.length ? (
+                  <div className="company-detail-grid">
+                    {userAccess.roles.map(
+                      (role: any) => (
+                        <div key={role.id}>
+                          <span className="field-label">
+                            {role.scope}
+                          </span>
+
+                          <strong>
+                            {role.code}
+                          </strong>
+
+                          <p className="muted">
+                            {role.name}
+                          </p>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <p className="muted">
+                    No roles are currently assigned.
+                  </p>
+                )}
               </div>
 
               <div className="company-user-detail-section">
                 <div className="section-heading-row">
                   <span className="eyebrow">
-                    ACCESS
+                    EFFECTIVE PERMISSIONS
                   </span>
+
+                  <span className="muted">
+                    Read-only
+                  </span>
+                </div>
+
+                {userAccess.permissions?.length ? (
+                  <div className="company-permission-grid">
+                    {userAccess.permissions.map(
+                      (permission: any) => (
+                        <div
+                          key={permission.id}
+                          className="company-permission-item"
+                        >
+                          <strong>
+                            {permission.code}
+                          </strong>
+
+                          <span>
+                            {permission.name}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <p className="muted">
+                    No effective permissions are currently assigned.
+                  </p>
+                )}
+              </div>
+
+              <div className="company-user-detail-section">
+                <span className="eyebrow">
+                  PASSWORD MANAGEMENT
+                </span>
+
+                <div className="company-access-role-row">
+                  <select
+                    className="company-input"
+                    value={passwordMode}
+                    onChange={(event) => {
+                      const mode =
+                        event.target.value as
+                          | 'generated'
+                          | 'manual'
+
+                      setPasswordMode(mode)
+                      setCopiedPassword(false)
+                      setMessage('')
+
+                      if (mode === 'generated') {
+                        setResetPassword(
+                          generateTemporaryPassword(),
+                        )
+                        setShowResetPassword(true)
+                      } else {
+                        setResetPassword('')
+                        setShowResetPassword(false)
+                      }
+                    }}
+                    disabled={passwordResetting}
+                  >
+                    <option value="generated">
+                      Generate Temporary Password
+                    </option>
+
+                    <option value="manual">
+                      Enter Password Manually
+                    </option>
+                  </select>
+
+                  {passwordMode === 'generated' && (
+                    <button
+                      type="button"
+                      className="small-btn"
+                      onClick={prepareGeneratedPassword}
+                      disabled={passwordResetting}
+                    >
+                      Generate
+                    </button>
+                  )}
+                </div>
+
+                <div className="company-user-password-row">
+                  <input
+                    className="company-input"
+                    type={
+                      showResetPassword
+                        ? 'text'
+                        : 'password'
+                    }
+                    value={resetPassword}
+                    onChange={(event) => {
+                      setResetPassword(event.target.value)
+                      setCopiedPassword(false)
+                    }}
+                    placeholder="Minimum 12 characters"
+                    disabled={passwordResetting}
+                  />
 
                   <button
                     type="button"
                     className="small-btn"
-                    onClick={viewUserAccess}
-                    disabled={accessLoading}
+                    onClick={() =>
+                      setShowResetPassword(
+                        (current) => !current,
+                      )
+                    }
+                    disabled={!resetPassword}
                   >
-                    {accessLoading
-                      ? 'Loading...'
-                      : 'View Access'}
+                    {showResetPassword
+                      ? 'Hide'
+                      : 'Show'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="small-btn"
+                    onClick={copyResetPassword}
+                    disabled={!resetPassword}
+                  >
+                    {copiedPassword
+                      ? 'Copied'
+                      : 'Copy'}
                   </button>
                 </div>
+
+                <div className="company-password-actions">
+                  <button
+                    type="button"
+                    className="company-primary-action"
+                    onClick={resetUserPassword}
+                    disabled={
+                      passwordResetting ||
+                      !resetPassword ||
+                      resetPassword.length < 12
+                    }
+                  >
+                    {passwordResetting
+                      ? 'Resetting...'
+                      : 'Reset Password'}
+                  </button>
+                </div>
+
+                <p className="muted company-password-help">
+                  Resetting the password revokes the user's
+                  active sessions and requires a password
+                  change at the next sign-in.
+                </p>
               </div>
             </>
           )}
         </div>
-      </div>
-
+      ) : (
+        <div className="panel company-user-detail-view">
+          <button
+            type="button"
+            className="small-btn"
+            onClick={() => setShowUserDetail(false)}
+          >
+            ← Back to Users
+          </button>
+        </div>
+      )}
       {showAdd && (
         <div
           className="company-modal-backdrop"
@@ -2807,7 +3006,7 @@ function CompanyUsers() {
                   setShowAdd(false)
                 }
               >
-                ï¿½
+                Ã¯Â¿Â½
               </button>
             </div>
 
@@ -2884,203 +3083,6 @@ function CompanyUsers() {
           </div>
         </div>
       )}
-      {showUserAccess && userAccess && (
-        <div
-          className="company-modal-backdrop"
-          onMouseDown={(event) => {
-            if (
-              event.target ===
-              event.currentTarget
-            ) {
-              setShowUserAccess(false)
-            }
-          }}
-        >
-          <div className="company-modal">
-            <div className="company-modal-header">
-              <div>
-                <span className="eyebrow">
-                  COMPANY USER ACCESS
-                </span>
-
-                <h2>
-                  {userAccess.user?.display_name}
-                </h2>
-
-                <p>
-                  @{userAccess.user?.username}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="company-modal-close"
-                onClick={() =>
-                  setShowUserAccess(false)
-                }
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="company-modal-body">
-              <div className="company-user-status-strip">
-                <div>
-                  <span className="field-label">
-                    Account status
-                  </span>
-
-                  <strong>
-                    {userAccess.user?.status}
-                  </strong>
-                </div>
-
-                <div>
-                  <span className="field-label">
-                    Membership
-                  </span>
-
-                  <strong>
-                    {userAccess.membership?.status}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="company-user-detail-section">
-                <div className="section-heading-row">
-                  <span className="eyebrow">
-                    ROLE ASSIGNMENT
-                  </span>
-                </div>
-
-                <div className="company-access-role-row">
-                  <select
-                    className="company-input"
-                    value={selectedRoleId}
-                    onChange={(event) =>
-                      setSelectedRoleId(event.target.value)
-                    }
-                    disabled={roleAssigning}
-                  >
-                    <option value="">
-                      Select a company role...
-                    </option>
-
-                    {roles
-                      .filter(
-                        (role: any) =>
-                          !userAccess?.roles?.some(
-                            (assignedRole: any) =>
-                              assignedRole.id === role.id ||
-                              assignedRole.code === role.code,
-                          ),
-                      )
-                      .map((role: any) => (
-                        <option
-                          key={role.id}
-                          value={role.id}
-                        >
-                          {role.name} ({role.code})
-                        </option>
-                      ))}
-                  </select>
-
-                  <button
-                    type="button"
-                    className="small-btn"
-                    onClick={assignRole}
-                    disabled={
-                      roleAssigning ||
-                      !selectedRoleId ||
-                      !selectedUser?.membership_id
-                    }
-                  >
-                    {roleAssigning
-                      ? 'Assigning...'
-                      : 'Assign Role'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="company-user-detail-section">
-                <span className="eyebrow">
-                  ASSIGNED ROLES
-                </span>
-
-                {userAccess.roles?.length ? (
-                  <div className="company-detail-grid">
-                    {userAccess.roles.map(
-                      (role: any) => (
-                        <div key={role.id}>
-                          <span className="field-label">
-                            {role.scope}
-                          </span>
-
-                          <strong>
-                            {role.code}
-                          </strong>
-
-                          <p className="muted">
-                            {role.name}
-                          </p>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                ) : (
-                  <p className="muted">
-                    No roles are currently assigned.
-                  </p>
-                )}
-              </div>
-
-              <div className="company-user-detail-section">
-                <span className="eyebrow">
-                  EFFECTIVE PERMISSIONS
-                </span>
-
-                {userAccess.permissions?.length ? (
-                  <div className="company-permission-grid">
-                    {userAccess.permissions.map(
-                      (permission: any) => (
-                        <div
-                          key={permission.id}
-                          className="company-permission-item"
-                        >
-                          <strong>
-                            {permission.code}
-                          </strong>
-
-                          <span>
-                            {permission.name}
-                          </span>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                ) : (
-                  <p className="muted">
-                    No effective permissions are currently assigned.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="company-modal-footer">
-              <button
-                type="button"
-                className="company-primary-action"
-                onClick={() =>
-                  setShowUserAccess(false)
-                }
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </>
   )
 }
@@ -3408,6 +3410,21 @@ createRoot(rootElement).render(
     </PlatformProvider>
   </StrictMode>,
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

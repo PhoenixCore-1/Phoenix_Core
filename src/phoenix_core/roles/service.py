@@ -1,4 +1,4 @@
-﻿"""Core Shared role and permission persistence service."""
+"""Core Shared role and permission persistence service."""
 
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -11,6 +11,7 @@ from phoenix_core.errors import (
 )
 from phoenix_core.roles.domain import Role
 from phoenix_core.permissions.domain import Permission
+from phoenix_core.organisations.membership import Membership
 
 
 class RoleService:
@@ -85,6 +86,27 @@ class RoleService:
             )
 
         return role
+
+    def get_membership(self, membership_id: UUID) -> Membership:
+        row = self.db.execute(
+            """
+            SELECT id,identity_id,organisation_id,status,created_at
+            FROM organisation_memberships
+            WHERE id=?
+            """,
+            (str(membership_id),),
+        ).fetchone()
+
+        if not row:
+            raise NotFoundError("Membership not found.")
+
+        return Membership(
+            UUID(row["id"]),
+            UUID(row["identity_id"]),
+            UUID(row["organisation_id"]),
+            row["status"],
+            datetime.fromisoformat(row["created_at"]),
+        )
 
     def list_assigned_roles(self, membership_id: UUID) -> list[Role]:
         rows = self.db.execute(

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { api } from '../../core/api'
 import { usePlatformContext } from '../../core/platform/PlatformContext'
@@ -209,7 +209,7 @@ export function SystemHome() {
             </span>
 
             <strong>
-              V1.0.0
+              V{__APP_VERSION__}
             </strong>
           </div>
 

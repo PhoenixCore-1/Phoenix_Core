@@ -1,4 +1,4 @@
-﻿import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet } from 'react-router'
 
 import { usePlatformContext } from '../core/platform/PlatformContext'
 
@@ -86,7 +86,7 @@ export function SystemShell() {
         </nav>
 
         <div className="side-foot">
-          CORE V1.0.0
+          CORE V{__APP_VERSION__}
         </div>
       </aside>
 

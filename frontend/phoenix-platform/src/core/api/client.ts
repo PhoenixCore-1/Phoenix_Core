@@ -19,12 +19,14 @@ export async function api<T>(
     ...options,
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
-      ...(currentOrganisationId
-        ? { 'X-Phoenix-Organisation': currentOrganisationId }
-        : {}),
-      ...(options.headers || {}),
-    },
+  ...(options.body instanceof FormData
+    ? {}
+    : { 'Content-Type': 'application/json' }),
+  ...(currentOrganisationId
+    ? { 'X-Phoenix-Organisation': currentOrganisationId }
+    : {}),
+  ...(options.headers || {}),
+},
   })
 
   let body: ApiResponse<T> | null = null

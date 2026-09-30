@@ -137,9 +137,35 @@ function App() {
       window.history.replaceState(null, '', '/company')
     }
 
+    if (!context.company) {
+      return <Login />
+    }
+
+    const companyContext: Context = {
+      user: {
+        id: context.user.id,
+        username: context.user.username,
+        display_name: context.user.display_name,
+        platform_level: context.user.platform_level,
+      },
+      company: {
+        id: context.company.id,
+        code: context.company.code,
+        name: context.company.name,
+        status: context.company.status ?? 'UNKNOWN',
+      },
+      modules: context.modules.map((module) => ({
+        id: module.id,
+        code: module.code,
+        name: module.name,
+        version: module.version ?? '',
+        active: module.active ?? false,
+      })),
+    }
+
     return (
       <CompanyShell
-        context={context}
+        context={companyContext}
         onLogout={() => void logout()}
       />
     )
@@ -147,6 +173,7 @@ function App() {
 
   return <AppRoutes />
 }
+
 function ChangePassword() {
   const {
     changePassword,
@@ -512,10 +539,10 @@ function Login() {
 
         <div className="login-footer-new">
           <span>
-            Phoenix Core Platform V1.0.0
+            Phoenix Core Platform V{__APP_VERSION__}
           </span>
 
-          <b>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½</b>
+          <b>🔒</b>
 
           <span>
             Secure access
@@ -1124,7 +1151,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½
+                🔒
               </button>
             </div>
 
@@ -1793,7 +1820,10 @@ function CompanyShell({
   ]
 
   const placeholderTitles: Record<
-    Exclude<CompanyView, 'home' | 'company' | 'users'>,
+    Exclude<
+    CompanyView, 
+    'home' | 'company' | 'users' | 'imports-customer'
+    >,
     {
       eyebrow: string
       title: string
@@ -1853,7 +1883,8 @@ function CompanyShell({
   const selectedPlaceholder =
     view !== 'home' &&
     view !== 'company' &&
-    view !== 'users'
+    view !== 'users' &&
+    view !== 'imports-customer'
       ? placeholderTitles[view]
       : null
 
@@ -2696,6 +2727,13 @@ function CustomerMasterImport({
   const [validating, setValidating] = useState(false)
   const [validationError, setValidationError] =
     useState<string | null>(null)
+  const [confirmationRequested, setConfirmationRequested] = useState(false)
+  const handleFileChange = (nextFile: File | null) => {
+    setValidationResult(null)
+    setValidationError(null)
+    setConfirmationRequested(false)
+    onFileChange(nextFile)
+  }
 
   const handleContinue = async () => {
     if (!file) {
@@ -2705,6 +2743,7 @@ function CustomerMasterImport({
     setValidating(true)
     setValidationError(null)
     setValidationResult(null)
+    setConfirmationRequested(false)
 
     try {
       const result = await parseCustomerMasterFile(file)
@@ -2756,14 +2795,139 @@ function CustomerMasterImport({
               type="file"
               accept=".xlsx,.csv"
               onChange={(event) =>
-                onFileChange(event.target.files?.[0] ?? null)
+                handleFileChange(event.target.files?.[0] ?? null)
               }
             />
           </label>
         </div>
       </div>
 
-      <div className="customer-import-actions">
+      {validationError ? (
+        <div className="imports-card customer-import-validation-error">
+          <strong>Validation failed</strong>
+          <p>{validationError}</p>
+        </div>
+      ) : null}
+
+      {validationResult ? (
+        <div className="imports-section customer-import-validation">
+          <div className="imports-section-heading">
+            <h3>Validation result</h3>
+            <p>
+              {validationResult.invalidRows > 0
+                ? 'Import blocked. All rows must pass validation before the import can be confirmed.'
+                : 'Validation passed. The file is ready for preview and confirmation.'}
+            </p>
+          </div>
+
+          <div className="imports-card-grid">
+            <div className="imports-card">
+              <div>
+                <strong>Total rows</strong>
+                <p>Customer records detected in the file.</p>
+              </div>
+              <strong>{validationResult.totalRows}</strong>
+            </div>
+
+            <div className="imports-card">
+              <div>
+                <strong>Valid rows</strong>
+                <p>Rows that passed all blocking validation rules.</p>
+              </div>
+              <strong>{validationResult.validRows}</strong>
+            </div>
+
+            <div className="imports-card">
+              <div>
+                <strong>Invalid rows</strong>
+                <p>Rows containing one or more blocking errors.</p>
+              </div>
+              <strong>{validationResult.invalidRows}</strong>
+            </div>
+          </div>
+
+          <div className="imports-card">
+            <strong>
+              {validationResult.invalidRows > 0
+                ? 'Import blocked'
+                : 'Validation passed'}
+            </strong>
+            <p>
+              {validationResult.invalidRows > 0
+                ? 'No customer records will be written until every validation error has been resolved.'
+                : 'No customer records have been imported yet. Confirmation remains a separate step.'}
+            </p>
+          </div>
+        </div>
+      ) : null}
+      {validationResult ? (
+        
+
+      <div className="customer-import-preview">
+            <div className="imports-section-heading">
+              <h3>Preview</h3>
+              <p>Showing the first {validationResult.previewRows.length} rows from the validated file.</p>
+            </div>
+
+            <div className="customer-import-preview-wrap">
+              <table className="customer-import-preview-table">
+                <thead>
+                  <tr>
+                    <th>Row</th>
+                    <th>Status</th>
+                    <th>Customer ID</th>
+                    <th>Customer name</th>
+                    <th>Validation issues</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {validationResult.previewRows.map((row) => {
+                    const customerIdIndex =
+                      validationResult.headers.indexOf('Customer ID')
+                    const customerNameIndex =
+                      validationResult.headers.indexOf('Customer name')
+
+                    return (
+                      <tr key={row.rowNumber}>
+                        <td>{row.rowNumber}</td>
+                        <td>
+                          <span
+                            className={
+                              row.status === 'VALID'
+                                ? 'customer-import-status valid'
+                                : 'customer-import-status invalid'
+                            }
+                          >
+                            {row.status}
+                          </span>
+                        </td>
+                        <td>
+                          {String(
+                            row.values[customerIdIndex] ?? '',
+                          )}
+                        </td>
+                        <td>
+                          {String(
+                            row.values[customerNameIndex] ?? '',
+                          )}
+                        </td>
+                        <td>
+                          {row.errors.length > 0
+                            ? row.errors.join(' ')
+                            : row.warnings.length > 0
+                              ? row.warnings.join(' ')
+                              : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+      ) : null}
+
+          <div className="customer-import-actions">
         <button
           type="button"
           className="secondary-btn"
@@ -2774,11 +2938,33 @@ function CustomerMasterImport({
         <button
           type="button"
           className="primary-btn"
-          disabled={!file}
+          disabled={!file || validating}
+          onClick={handleContinue}
         >
-          Continue
+          {validating ? 'Validating...' : 'Continue'}
         </button>
+
+        {validationResult && validationResult.invalidRows === 0 ? (
+          <button
+            type="button"
+            className="primary-btn customer-import-confirmation"
+            onClick={() => setConfirmationRequested(true)}
+          >
+            Confirm Import
+          </button>
+        ) : null}
       </div>
+
+      {confirmationRequested ? (
+        <div className="customer-import-confirmation-panel">
+          <strong>Import confirmation requested</strong>
+          <p>
+            The file has passed validation. No customer records have been
+            written yet. The next step will create an Import Job and perform
+            the atomic commit.
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -2981,7 +3167,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ v{module.version}
+                      {module.code} 🔒 v{module.version}
                     </span>
                   </div>
 
@@ -4007,7 +4193,7 @@ const [accessLoading, setAccessLoading] =
                   setShowAdd(false)
                 }
               >
-                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½
+                🔒
               </button>
             </div>
 
@@ -4231,7 +4417,7 @@ function UserShell({
 
             <button
               type="button"
-              onClick={logout}
+              onClick={onLogout}
             >
               Sign out
             </button>

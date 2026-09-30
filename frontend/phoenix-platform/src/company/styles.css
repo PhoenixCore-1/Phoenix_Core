@@ -1,0 +1,161 @@
+/* ============================================================
+   USER DETAILS - FINAL COMPACT TWO-COLUMN LAYOUT
+   CSS-only: intentionally overrides earlier User Details rules.
+   ============================================================ */
+
+.company-user-detail-view {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.6fr);
+  gap: 14px;
+  padding: 20px 24px 24px;
+  align-items: start;
+}
+
+/* Header and status span the full page width */
+.company-user-detail-view > .company-user-detail-header,
+.company-user-detail-view > .company-user-status-strip,
+.company-user-detail-view > .company-feedback {
+  grid-column: 1 / -1;
+}
+
+.company-user-detail-header {
+  margin-bottom: 0;
+}
+
+.company-user-status-strip {
+  margin: 0;
+}
+
+/* All detail sections become compact cards */
+.company-user-detail-view > .company-user-detail-section {
+  margin: 0;
+  padding: 16px 18px;
+  min-width: 0;
+}
+
+/* Account card -> left column */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-detail-grid) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+/* Assigned Roles card -> right column */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-add-role-row) {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+/* Effective Permissions -> right column */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-permission-grid) {
+  grid-column: 2;
+  grid-row: 4;
+}
+
+/* Password Management -> left column */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-password-actions) {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+/* Account information stays compact */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-detail-grid)
+  .company-detail-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* Assigned roles */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-add-role-row)
+  .company-detail-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.company-user-detail-view .company-access-role-row {
+  min-height: 0;
+  padding: 10px 12px;
+}
+
+.company-user-detail-view .company-role-content {
+  min-width: 0;
+}
+
+.company-user-detail-view .company-role-code {
+  display: block;
+  margin-top: 2px;
+}
+
+.company-user-detail-view .company-role-name {
+  margin: 2px 0 0;
+}
+
+.company-user-detail-view .company-role-remove {
+  flex-shrink: 0;
+}
+
+/* Add Role */
+.company-user-detail-view .company-add-role-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+/* Permissions */
+.company-user-detail-view .company-permission-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.company-user-detail-view .company-permission-item {
+  padding: 7px 9px;
+}
+
+/* Password management */
+.company-user-detail-view .company-user-password-row {
+  margin-bottom: 10px;
+}
+
+.company-user-detail-view .company-password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Loading / feedback should not disturb the two-column layout */
+.company-user-detail-view .company-feedback {
+  margin: 0;
+}
+
+/* Responsive fallback */
+@media (max-width: 900px) {
+  .company-user-detail-view {
+    grid-template-columns: 1fr;
+  }
+
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-detail-grid),
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-add-role-row),
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-permission-grid),
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-password-actions) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .company-user-detail-view .company-permission-grid {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+}

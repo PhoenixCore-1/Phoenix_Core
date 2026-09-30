@@ -67,6 +67,10 @@ export interface CreatedProductionOrder {
   updated_at: string
 }
 
+export interface ReleasedProductionOrder {
+  production_order_id: number
+  status: string
+}
 export async function createProductionOrder(
   request: CreateProductionOrderRequest,
 ): Promise<CreatedProductionOrder> {
@@ -79,6 +83,16 @@ export async function createProductionOrder(
   )
 }
 
+export async function releaseProductionOrder(
+  productionOrderId: number,
+): Promise<ReleasedProductionOrder> {
+  return api<ReleasedProductionOrder>(
+    `/api/v1/production/orders/${productionOrderId}/release`,
+    {
+      method: 'POST',
+    },
+  )
+}
 export async function getProductionOperationalSnapshot(
   startAt?: string,
   endAt?: string,
@@ -93,6 +107,7 @@ export async function getProductionOperationalSnapshot(
 
   return api<ProductionOperationalSnapshot>(path)
 }
+
 
 
 

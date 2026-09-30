@@ -1,4 +1,5 @@
 import { StrictMode, useEffect, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { createRoot } from 'react-dom/client'
 import { NavLink, Outlet } from 'react-router'
 import './styles.css'
@@ -38,6 +39,8 @@ type CompanyView =
   | 'activity'
   | 'settings'
   | 'connect'
+  | 'imports'
+  | 'imports-customer'
 
 type UserView =
   | 'home'
@@ -512,7 +515,7 @@ function Login() {
             Phoenix Core Platform V1.0.0
           </span>
 
-          <b>ï¿½</b>
+          <b>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½</b>
 
           <span>
             Secure access
@@ -638,7 +641,7 @@ function SystemShell() {
         </nav>
 
         <div className="side-foot">
-          CORE V1.0.0
+          CORE V{__APP_VERSION__}
         </div>
       </aside>
 
@@ -1121,7 +1124,7 @@ function SystemUsers() {
                   setShowCreate(false)
                 }
               >
-                ï¿½
+                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½
               </button>
             </div>
 
@@ -1644,6 +1647,113 @@ function SystemCompanies() {
     </>
   )
 }
+function CompanyNavIcon({
+  name,
+}: {
+  name: string
+}) {
+  const paths: Record<string, React.ReactNode> = {
+    home: (
+      <>
+        <path d="M3 10.5 12 3l9 7.5" />
+        <path d="M5 9.5V21h14V9.5" />
+        <path d="M9 21v-7h6v7" />
+      </>
+    ),
+    building: (
+      <>
+        <path d="M4 21V4h11v17" />
+        <path d="M15 9h5v12" />
+        <path d="M7 8h2M11 8h1M7 12h2M11 12h1M7 16h2M11 16h1" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+        <circle cx="9.5" cy="7" r="3.5" />
+        <path d="M17 11a3.5 3.5 0 0 0 0-7M21 21v-2a4 4 0 0 0-3-3.87" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 3 20 6v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6l8-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+    file: (
+      <>
+        <path d="M6 3h8l4 4v14H6z" />
+        <path d="M14 3v5h5M9 13h6M9 17h6" />
+      </>
+    ),
+    scale: (
+      <>
+        <path d="M12 3v18M7 6h10M5 21h14" />
+        <path d="m7 6-4 7h8L7 6ZM17 6l-4 7h8l-4-7Z" />
+      </>
+    ),
+    activity: (
+      <>
+        <path d="M3 12h4l2-6 4 12 2-6h6" />
+      </>
+    ),
+    briefcase: (
+      <>
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M8 7V5h8v2M3 12h18M10 12v2h4v-2" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 19V5M4 19h17" />
+        <path d="m7 15 4-4 3 2 5-6" />
+      </>
+    ),
+    report: (
+      <>
+        <path d="M5 20V10M12 20V4M19 20v-7" />
+      </>
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" />
+      </>
+    ),
+    upload: (
+      <>
+        <path d="M12 16V4M8 8l4-4 4 4" />
+        <path d="M5 13v6h14v-6" />
+      </>
+    ),
+    plug: (
+      <>
+        <path d="M9 7V3M15 7V3M7 7h10v3a5 5 0 0 1-10 0V7ZM12 15v6" />
+      </>
+    ),
+    link: (
+      <>
+        <path d="m10 13 4-4" />
+        <path d="M7 17H6a4 4 0 0 1 0-8h3M17 7h1a4 4 0 0 1 0 8h-3" />
+      </>
+    ),
+  }
+
+  return (
+    <svg
+      className="company-nav-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name] ?? paths.file}
+    </svg>
+  )
+}
 function CompanyShell({
   context,
   onLogout,
@@ -1653,6 +1763,8 @@ function CompanyShell({
 }) {
   const [view, setView] =
     useState<CompanyView>('home')
+  const [customerImportFile, setCustomerImportFile] =
+    useState<File | null>(null)
 
   const [notificationsOpen, setNotificationsOpen] =
     useState(false)
@@ -1730,6 +1842,12 @@ function CompanyShell({
       description:
         'Company communication and integration services.',
     },
+    imports: {
+      eyebrow: 'IMPORTS / EXPORTS',
+      title: 'Imports / Exports',
+      description:
+        'Import and export company data while maintaining portable external references.',
+    },
   }
 
   const selectedPlaceholder =
@@ -1739,6 +1857,26 @@ function CompanyShell({
       ? placeholderTitles[view]
       : null
 
+  const [expandedGroups, setExpandedGroups] =
+    useState({
+      core: true,
+      governance: false,
+      operations: false,
+      platform: false,
+    })
+
+  const toggleGroup = (
+    group:
+      | 'core'
+      | 'governance'
+      | 'operations'
+      | 'platform',
+  ) => {
+    setExpandedGroups((current) => ({
+      ...current,
+      [group]: !current[group],
+    }))
+  }
   return (
     <div className="shell company-platform-shell">
       <aside>
@@ -1755,47 +1893,275 @@ function CompanyShell({
           COMPANY PLATFORM
         </div>
 
-        <nav>
-          <button
-            type="button"
-            className={
-              view === 'home'
-                ? 'active'
-                : ''
-            }
-            onClick={() =>
-              setView('home')
-            }
-          >
-            <span className="company-nav-icon">ï¿½</span>
-            Home
-          </button>
 
-          {navigation.map((item) => (
+        <nav className="company-sidebar-nav">
+
+          <div className="company-nav-group">
+
             <button
-              key={item.view}
               type="button"
-              className={
-                view === item.view
-                  ? 'active'
-                  : ''
-              }
-              onClick={() => {
-                setNotificationsOpen(false)
-                setView(item.view)
-              }}
+              className="company-nav-group-header"
+              aria-expanded={expandedGroups.core}
+              onClick={() => toggleGroup('core')}
             >
-              <span className="company-nav-icon">
-                {item.icon}
-              </span>
+              <span>CORE</span>
 
-              {item.label}
+              <span className="company-nav-group-chevron">
+                {expandedGroups.core ? '−' : '+'}
+              </span>
             </button>
-          ))}
+
+            {expandedGroups.core && (
+              <div className="company-nav-group-items">
+
+                <button
+                  type="button"
+                  className={
+                    view === 'home'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('home')}
+                >
+                  <CompanyNavIcon name="home" />
+                  Home
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'company'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('company')}
+                >
+                  <CompanyNavIcon name="building" />
+                  Company Profile
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'users'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('users')}
+                >
+                  <CompanyNavIcon name="users" />
+                  Users
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'roles'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('roles')}
+                >
+                  <CompanyNavIcon name="shield" />
+                  Roles
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+          <div className="company-nav-group">
+
+            <button
+              type="button"
+              className="company-nav-group-header"
+              aria-expanded={expandedGroups.governance}
+              onClick={() => toggleGroup('governance')}
+            >
+              <span>GOVERNANCE</span>
+
+              <span className="company-nav-group-chevron">
+                {expandedGroups.governance ? '−' : '+'}
+              </span>
+            </button>
+
+            {expandedGroups.governance && (
+              <div className="company-nav-group-items">
+
+                <button
+                  type="button"
+                  className="company-nav-placeholder"
+                  disabled
+                >
+                  <CompanyNavIcon name="file" />
+                  Documents
+                </button>
+
+                <button
+                  type="button"
+                  className="company-nav-placeholder"
+                  disabled
+                >
+                  <CompanyNavIcon name="scale" />
+                  Legal &amp; Governance
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'activity'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('activity')}
+                >
+                  <CompanyNavIcon name="activity" />
+                  Activity
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+          <div className="company-nav-group">
+
+            <button
+              type="button"
+              className="company-nav-group-header"
+              aria-expanded={expandedGroups.operations}
+              onClick={() => toggleGroup('operations')}
+            >
+              <span>OPERATIONS</span>
+
+              <span className="company-nav-group-chevron">
+                {expandedGroups.operations ? '−' : '+'}
+              </span>
+            </button>
+
+            {expandedGroups.operations && (
+              <div className="company-nav-group-items">
+
+                <button
+                  type="button"
+                  className={
+                    view === 'workspace'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('workspace')}
+                >
+                  <CompanyNavIcon name="briefcase" />
+                  Workspace
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'kpi'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('kpi')}
+                >
+                  <CompanyNavIcon name="chart" />
+                  KPI
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'reporting'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('reporting')}
+                >
+                  <CompanyNavIcon name="report" />
+                  Reporting
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+          <div className="company-nav-group">
+
+            <button
+              type="button"
+              className="company-nav-group-header"
+              aria-expanded={expandedGroups.platform}
+              onClick={() => toggleGroup('platform')}
+            >
+              <span>PLATFORM</span>
+
+              <span className="company-nav-group-chevron">
+                {expandedGroups.platform ? '−' : '+'}
+              </span>
+            </button>
+
+            {expandedGroups.platform && (
+              <div className="company-nav-group-items">
+
+                <button
+                  type="button"
+                  className={
+                    view === 'settings'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('settings')}
+                >
+                  <CompanyNavIcon name="settings" />
+                  Company Settings
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'imports'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('imports')}
+                >
+                  <CompanyNavIcon name="upload" />
+                  Imports / Exports
+                </button>
+
+                <button
+                  type="button"
+                  className="company-nav-placeholder"
+                  disabled
+                >
+                  <CompanyNavIcon name="plug" />
+                  API / Integrations
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    view === 'connect'
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => setView('connect')}
+                >
+                  <CompanyNavIcon name="link" />
+                  Phoenix Connect
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
         </nav>
 
         <div className="side-foot">
-          CORE V1.0.0
+          CORE V{__APP_VERSION__}
         </div>
       </aside>
 
@@ -1817,7 +2183,27 @@ function CompanyShell({
                 className="company-search-icon"
                 aria-hidden="true"
               >
-                ?
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                >
+                  <circle
+                    cx="11"
+                    cy="11"
+                    r="6.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  />
+                  <path
+                    d="M16 16l5 5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </span>
 
               <input
@@ -1827,9 +2213,65 @@ function CompanyShell({
                 onChange={(event) =>
                   setSearch(event.target.value)
                 }
+                aria-label="Search Company Platform"
               />
-            </div>
 
+              {search.trim() && (
+                <div className="company-search-results">
+                  {[
+                    { view: 'home' as CompanyView, label: 'Home' },
+                    { view: 'company' as CompanyView, label: 'Company Profile' },
+                    { view: 'users' as CompanyView, label: 'Users' },
+                    { view: 'roles' as CompanyView, label: 'Roles' },
+                    { view: 'activity' as CompanyView, label: 'Activity' },
+                    { view: 'workspace' as CompanyView, label: 'Workspace' },
+                    { view: 'kpi' as CompanyView, label: 'KPI' },
+                    { view: 'reporting' as CompanyView, label: 'Reporting' },
+                    { view: 'settings' as CompanyView, label: 'Company Settings' },
+                    { view: 'connect' as CompanyView, label: 'Phoenix Connect' },
+                  ]
+                    .filter((item) =>
+                      item.label
+                        .toLowerCase()
+                        .includes(search.trim().toLowerCase()),
+                    )
+                    .map((item) => (
+                      <button
+                        key={item.view}
+                        type="button"
+                        className="company-search-result"
+                        onClick={() => {
+                          setView(item.view)
+                          setSearch('')
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+
+                  {[
+                    { view: 'home' as CompanyView, label: 'Home' },
+                    { view: 'company' as CompanyView, label: 'Company Profile' },
+                    { view: 'users' as CompanyView, label: 'Users' },
+                    { view: 'roles' as CompanyView, label: 'Roles' },
+                    { view: 'activity' as CompanyView, label: 'Activity' },
+                    { view: 'workspace' as CompanyView, label: 'Workspace' },
+                    { view: 'kpi' as CompanyView, label: 'KPI' },
+                    { view: 'reporting' as CompanyView, label: 'Reporting' },
+                    { view: 'settings' as CompanyView, label: 'Company Settings' },
+                    { view: 'connect' as CompanyView, label: 'Phoenix Connect' },
+                  ].filter((item) =>
+                    item.label
+                      .toLowerCase()
+                      .includes(search.trim().toLowerCase()),
+                  ).length === 0 && (
+                    <div className="company-search-no-results">
+                      No Company Platform results
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               className="company-ai-button"
@@ -1838,7 +2280,26 @@ function CompanyShell({
                 setNotificationsOpen(false)
               }}
             >
-              <span>?</span>
+              <svg
+                className="company-ai-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+              </svg>
               AI
             </button>
 
@@ -1894,7 +2355,19 @@ function CompanyShell({
                         setNotificationsOpen(false)
                       }
                     >
-                      ï¿½
+                      <svg
+                        className="company-notification-close-icon"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M6 6l12 12M18 6L6 18"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
                     </button>
                   </div>
 
@@ -1945,7 +2418,7 @@ function CompanyShell({
                 </span>
 
                 <span className="company-profile-chevron">
-                  {profileOpen ? '^' : '?'}
+                  <span className="company-profile-chevron" aria-hidden="true">                     <svg                       viewBox="0 0 24 24"                       width="16"                       height="16"                     >                       <path                         d={profileOpen ? "M6 14l6-6 6 6" : "M6 10l6 6 6-6"}                         fill="none"                         stroke="currentColor"                         strokeWidth="2"                         strokeLinecap="round"                         strokeLinejoin="round"                       />                     </svg>                   </span>
                 </span>
               </button>
 
@@ -1981,7 +2454,7 @@ function CompanyShell({
                       setProfileOpen(false)
                     }}
                   >
-                    <span>?</span>
+                    <span aria-hidden="true">                       <svg viewBox="0 0 24 24" width="18" height="18">                         <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" strokeWidth="1.8" />                         <path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />                       </svg>                     </span>
                     Profile
                   </button>
 
@@ -1993,7 +2466,7 @@ function CompanyShell({
                       setView('settings')
                     }}
                   >
-                    <span>?</span>
+                    <span aria-hidden="true">                       <svg viewBox="0 0 24 24" width="18" height="18">                         <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />                         <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />                       </svg>                     </span>
                     Settings
                   </button>
 
@@ -2004,7 +2477,7 @@ function CompanyShell({
                     className="company-profile-menu-item signout"
                     onClick={onLogout}
                   >
-                    <span>?</span>
+                    <span aria-hidden="true">                       <svg viewBox="0 0 24 24" width="18" height="18">                         <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />                         <path d="M13 8l4 4-4 4M9 12h8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />                       </svg>                     </span>
                     Sign out
                   </button>
                 </div>
@@ -2033,20 +2506,358 @@ function CompanyShell({
           {view === 'roles' && (
             <Roles />
           )}
-          {selectedPlaceholder && view !== 'roles' && (
-            <Placeholder
-              eyebrow={selectedPlaceholder.eyebrow}
-              title={selectedPlaceholder.title}
-              description={
-                selectedPlaceholder.description
-              }
+          {view === 'imports-customer' ? (
+            <CustomerMasterImport
+              file={customerImportFile}
+              onFileChange={setCustomerImportFile}
+              onBack={() => setView('imports')}
             />
+          ) : null}
+
+          {view === 'imports' ? (
+            <ImportsExportsLanding
+              onImportCustomer={() => setView('imports-customer')}
+            />
+          ) : (
+            selectedPlaceholder && view !== 'roles' && (
+              <Placeholder
+                eyebrow={selectedPlaceholder.eyebrow}
+                title={selectedPlaceholder.title}
+                description={
+                  selectedPlaceholder.description
+                }
+              />
+            )
           )}
         </section>
       </main>
     </div>
   )
 }
+type CustomerImportRow = {
+  rowNumber: number
+  values: unknown[]
+  status: 'VALID' | 'INVALID'
+  errors: string[]
+  warnings: string[]
+}
+
+type CustomerImportValidationResult = {
+  headers: string[]
+  totalRows: number
+  validRows: number
+  invalidRows: number
+  rows: CustomerImportRow[]
+  previewRows: CustomerImportRow[]
+}
+
+async function parseCustomerMasterFile(
+  file: File,
+): Promise<CustomerImportValidationResult> {
+  const buffer = await file.arrayBuffer()
+
+  const workbook = XLSX.read(buffer, {
+    type: 'array',
+    cellDates: true,
+  })
+
+  if (workbook.SheetNames.length === 0) {
+    throw new Error('The file does not contain a worksheet.')
+  }
+
+  const sheetName =
+    workbook.SheetNames.includes('Customers')
+      ? 'Customers'
+      : workbook.SheetNames[0]
+
+  const sheet = workbook.Sheets[sheetName]
+
+  if (!sheet) {
+    throw new Error('The customer worksheet could not be read.')
+  }
+
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: null,
+    raw: true,
+  })
+
+  if (matrix.length === 0) {
+    throw new Error('The selected file contains no rows.')
+  }
+
+  const headers = (matrix[0] ?? []).map((value) =>
+    String(value ?? '').trim(),
+  )
+
+  const customerIdIndex = headers.indexOf('Customer ID')
+  const customerNameIndex = headers.indexOf('Customer name')
+
+  const missingColumns: string[] = []
+
+  if (customerIdIndex === -1) {
+    missingColumns.push('Customer ID')
+  }
+
+  if (customerNameIndex === -1) {
+    missingColumns.push('Customer name')
+  }
+
+  if (missingColumns.length > 0) {
+    throw new Error(
+      `Missing required column(s): ${missingColumns.join(', ')}`,
+    )
+  }
+
+  const sourceRows = matrix.slice(1)
+  const customerIds = new Map<string, number>()
+
+  sourceRows.forEach((values, index) => {
+    const rawId = values[customerIdIndex]
+    const customerId = String(rawId ?? '').trim()
+
+    if (customerId && !customerIds.has(customerId)) {
+      customerIds.set(customerId, index + 2)
+    }
+  })
+
+  const rows: CustomerImportRow[] = sourceRows.map(
+    (values, index) => {
+      const rowNumber = index + 2
+      const errors: string[] = []
+      const warnings: string[] = []
+
+      const customerId = String(
+        values[customerIdIndex] ?? '',
+      ).trim()
+
+      const customerName = String(
+        values[customerNameIndex] ?? '',
+      ).trim()
+
+      if (!customerId) {
+        errors.push('Customer ID is required.')
+      } else {
+        const firstRow = customerIds.get(customerId)
+
+        if (
+          firstRow !== undefined &&
+          firstRow !== rowNumber
+        ) {
+          errors.push(
+            `Duplicate Customer ID "${customerId}" also appears on row ${firstRow}.`,
+          )
+        }
+      }
+
+      if (!customerName) {
+        errors.push('Customer name is required.')
+      }
+
+      return {
+        rowNumber,
+        values,
+        status:
+          errors.length === 0
+            ? 'VALID'
+            : 'INVALID',
+        errors,
+        warnings,
+      }
+    },
+  )
+
+  const validRows = rows.filter(
+    (row) => row.status === 'VALID',
+  ).length
+
+  const invalidRows = rows.length - validRows
+
+  return {
+    headers,
+    totalRows: rows.length,
+    validRows,
+    invalidRows,
+    rows,
+    previewRows: rows.slice(0, 25),
+  }
+}
+function CustomerMasterImport({
+  file,
+  onFileChange,
+  onBack,
+}: {
+  file: File | null
+  onFileChange: (file: File | null) => void
+  onBack: () => void
+}) {
+  const [validationResult, setValidationResult] =
+    useState<CustomerImportValidationResult | null>(null)
+  const [validating, setValidating] = useState(false)
+  const [validationError, setValidationError] =
+    useState<string | null>(null)
+
+  const handleContinue = async () => {
+    if (!file) {
+      return
+    }
+
+    setValidating(true)
+    setValidationError(null)
+    setValidationResult(null)
+
+    try {
+      const result = await parseCustomerMasterFile(file)
+      setValidationResult(result)
+    } catch (error) {
+      setValidationError(
+        error instanceof Error
+          ? error.message
+          : 'The Customer Master file could not be validated.',
+      )
+    } finally {
+      setValidating(false)
+    }
+  }
+
+  return (
+    <div className="company-placeholder customer-master-import">
+      <div className="company-placeholder-header">
+        <div>
+          <div className="company-placeholder-eyebrow">CUSTOMER MASTER</div>
+          <h2>Import Customer Master</h2>
+          <p>
+            Select a Customer Master file to begin validation. Nothing is imported until you explicitly confirm the import.
+          </p>
+        </div>
+      </div>
+
+      <div className="imports-section">
+        <div className="imports-section-heading">
+          <h3>Select file</h3>
+          <p>Supported formats: Excel (.xlsx) and CSV (.csv).</p>
+        </div>
+
+        <div className="imports-card customer-import-file-card">
+          <div>
+            <strong>
+              {file ? file.name : 'No file selected'}
+            </strong>
+            <p>
+              {file
+                ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                : 'Choose a Customer Master file to continue.'}
+            </p>
+          </div>
+
+          <label className="imports-file-button">
+            Choose File
+            <input
+              type="file"
+              accept=".xlsx,.csv"
+              onChange={(event) =>
+                onFileChange(event.target.files?.[0] ?? null)
+              }
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="customer-import-actions">
+        <button
+          type="button"
+          className="secondary-btn"
+          onClick={onBack}
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={!file}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  )
+}
+function ImportsExportsLanding({
+  onImportCustomer,
+}: {
+  onImportCustomer: () => void
+}) {
+
+  return (
+    <div className="company-placeholder imports-exports-landing">
+      <div className="company-placeholder-header">
+        <div>
+          <div className="company-placeholder-eyebrow">IMPORTS / EXPORTS</div>
+          <h2>Imports / Exports</h2>
+          <p>
+            Import and export company master data while maintaining portable external references.
+          </p>
+        </div>
+      </div>
+      <div className="imports-section">
+        <div className="imports-section-heading">
+          <h3>Master Data Imports</h3>
+          <p>Load reference data used by Phoenix modules and future domain platforms.</p>
+        </div>
+
+        <div className="imports-card-grid">
+          <div className="imports-card">
+            <div>
+              <strong>Customer Master</strong>
+              <p>Customer reference data for CRM 360.</p>
+            </div>
+            <button
+              type="button"
+              onClick={onImportCustomer}
+            >
+              Import Customer Master
+            </button>
+            </div>
+            <div className="imports-card">
+              <div>
+                <strong>Product / Item Master</strong>
+                <p>Product and item reference data for Inventory 360.</p>
+              </div>
+              <button type="button" disabled>
+                Import Product / Item Master
+              </button>
+            </div>
+
+          <div className="imports-card">
+            <div>
+              <strong>Warehouse Master</strong>
+              <p>Warehouse reference data for Warehouse 360.</p>
+            </div>
+            <span className="imports-card-status">Coming with Warehouse 360</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="imports-section">
+        <div className="imports-section-heading">
+          <h3>Import History</h3>
+          <p>Review previous uploads, validation results and import activity.</p>
+        </div>
+
+        <div className="imports-card imports-history-card">
+          <div>
+            <strong>Import History</strong>
+            <p>Every confirmed import will retain its validation and processing history.</p>
+          </div>
+          <button type="button" disabled>
+            View Import History
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CompanyHome({
   context,
 }: {
@@ -2170,7 +2981,7 @@ function CompanyHome({
                   <div>
                     <strong>{module.name}</strong>
                     <span>
-                      {module.code} ï¿½ v{module.version}
+                      {module.code} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ v{module.version}
                     </span>
                   </div>
 
@@ -2283,6 +3094,18 @@ function CompanyUsers() {
     useState<any | null>(null)
 const [accessLoading, setAccessLoading] =
     useState(false)
+
+  const [companyRoles, setCompanyRoles] =
+    useState<any[]>([])
+
+  const [rolesLoading, setRolesLoading] =
+    useState(false)
+
+  const [roleChanging, setRoleChanging] =
+    useState(false)
+
+  const [selectedRoleId, setSelectedRoleId] =
+    useState('')
   const [passwordResetting, setPasswordResetting] =
     useState(false)
 
@@ -2371,6 +3194,41 @@ const [accessLoading, setAccessLoading] =
     }
   }
 
+  const loadCompanyRoles = async () => {
+    setRolesLoading(true)
+
+    try {
+      const data = await api(
+        '/api/v1/company/roles',
+      )
+
+      const items =
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data.data?.items)
+            ? data.data.items
+            : Array.isArray(data.items)
+              ? data.items
+              : []
+
+      setCompanyRoles(
+        items.filter(
+          (role: any) =>
+            role.code !== 'COMPANY.ADMIN' &&
+            role.status !== 'DISABLED',
+        ),
+      )
+    } catch (roleError) {
+      setMessage(
+        roleError instanceof Error
+          ? roleError.message
+          : 'Unable to load company roles.',
+      )
+    } finally {
+      setRolesLoading(false)
+    }
+  }
+
   const loadUserAccess = async (
     userId: string,
   ) => {
@@ -2395,6 +3253,68 @@ const [accessLoading, setAccessLoading] =
       setAccessLoading(false)
     }
   }
+
+  const assignRole = async () => {
+    if (!userAccess?.membership?.id || !selectedRoleId) {
+      return
+    }
+
+    setRoleChanging(true)
+    setMessage('')
+
+    try {
+      await api(
+        `/api/v1/company/memberships/${userAccess.membership.id}/roles/${selectedRoleId}`,
+        {
+          method: 'POST',
+        },
+      )
+
+      setSelectedRoleId('')
+      setMessage('Role assigned successfully.')
+
+      await loadUserAccess(selectedUserId as string)
+    } catch (roleError) {
+      setMessage(
+        roleError instanceof Error
+          ? roleError.message
+          : 'Unable to assign role.',
+      )
+    } finally {
+      setRoleChanging(false)
+    }
+  }
+
+  const removeRole = async (roleId: string) => {
+    if (!userAccess?.membership?.id) {
+      return
+    }
+
+    setRoleChanging(true)
+    setMessage('')
+
+    try {
+      await api(
+        `/api/v1/company/memberships/${userAccess.membership.id}/roles/${roleId}`,
+        {
+          method: 'DELETE',
+        },
+      )
+
+      setMessage('Role removed successfully.')
+
+      await loadUserAccess(selectedUserId as string)
+    } catch (roleError) {
+      setMessage(
+        roleError instanceof Error
+          ? roleError.message
+          : 'Unable to remove role.',
+      )
+    } finally {
+      setRoleChanging(false)
+    }
+  }
+
   const [search, setSearch] =
     useState('')
 
@@ -2648,6 +3568,8 @@ const [accessLoading, setAccessLoading] =
                             setShowResetPassword(false)
                             setCopiedPassword(false)
                             void loadUserAccess(user.id)
+                            void loadCompanyRoles()
+                            setSelectedRoleId('')
                             setMessage('')
                           }}
                         >
@@ -2778,7 +3700,7 @@ const [accessLoading, setAccessLoading] =
                   </span>
 
                   <span className="muted">
-                    Read-only
+                    Manage access through roles
                   </span>
                 </div>
 
@@ -2786,18 +3708,36 @@ const [accessLoading, setAccessLoading] =
                   <div className="company-detail-grid">
                     {userAccess.roles.map(
                       (role: any) => (
-                        <div key={role.id}>
-                          <span className="field-label">
-                            {role.scope}
-                          </span>
+                        <div
+                          key={role.id}
+                          className="company-access-role-row"
+                        >
+                           <div className="company-role-content">
+                            <span className="field-label">
+                              {role.scope}
+                            </span>
 
-                          <strong>
-                            {role.code}
-                          </strong>
+                             <strong className="company-role-code">
+                              {role.code}
+                             </strong>
 
-                          <p className="muted">
-                            {role.name}
-                          </p>
+                             <p className="muted company-role-name">
+                              {role.name}
+                             </p>
+                           </div>
+
+                          {role.code !== 'COMPANY.ADMIN' && (
+                            <button
+                              type="button"
+                               className="small-btn company-role-remove"
+                              disabled={roleChanging}
+                              onClick={() =>
+                                void removeRole(role.id)
+                              }
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                       ),
                     )}
@@ -2807,6 +3747,63 @@ const [accessLoading, setAccessLoading] =
                     No roles are currently assigned.
                   </p>
                 )}
+
+                <div className="company-add-role-row">
+                  <select
+                    className="company-input"
+                    value={selectedRoleId}
+                    disabled={
+                      rolesLoading ||
+                      roleChanging
+                    }
+                    onChange={(event) =>
+                      setSelectedRoleId(
+                        event.target.value,
+                      )
+                    }
+                  >
+                    <option value="">
+                      {rolesLoading
+                        ? 'Loading roles...'
+                        : 'Select a role to assign'}
+                    </option>
+
+                    {companyRoles
+                      .filter(
+                        (role: any) =>
+                          !userAccess.roles?.some(
+                            (assignedRole: any) =>
+                              assignedRole.id ===
+                              role.id,
+                          ),
+                      )
+                      .map((role: any) => (
+                        <option
+                          key={role.id}
+                          value={role.id}
+                        >
+                          {role.name} ({role.code})
+                        </option>
+                      ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    className="company-primary-action"
+                    disabled={
+                      !selectedRoleId ||
+                      rolesLoading ||
+                      roleChanging
+                    }
+                    onClick={() =>
+                      void assignRole()
+                    }
+                  >
+                    {roleChanging
+                      ? 'Saving...'
+                      : 'Add Role'}
+                  </button>
+                </div>
               </div>
 
               <div className="company-user-detail-section">
@@ -3010,7 +4007,7 @@ const [accessLoading, setAccessLoading] =
                   setShowAdd(false)
                 }
               >
-                ï¿½
+                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½
               </button>
             </div>
 
@@ -3211,7 +4208,7 @@ function UserShell({
         </nav>
 
         <div className="side-foot">
-          CORE V1.0.0
+          CORE V{__APP_VERSION__}
         </div>
       </aside>
 
@@ -3414,3 +4411,17 @@ createRoot(rootElement).render(
     </PlatformProvider>
   </StrictMode>,
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+

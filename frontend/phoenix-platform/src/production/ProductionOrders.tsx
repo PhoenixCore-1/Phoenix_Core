@@ -2,6 +2,7 @@
 import {
   createProductionOrder,
   getProductionOperationalSnapshot,
+  releaseProductionOrder,
   type ProductionOrder,
 } from './api/production'
 
@@ -31,6 +32,11 @@ export function ProductionOrders() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  const [releasing, setReleasing] = useState(false)
+  const [releaseError, setReleaseError] = useState<string | null>(null)
+  const [releaseSuccess, setReleaseSuccess] = useState<string | null>(null)
+
   const [orderNumber, setOrderNumber] = useState('')
   const [purpose, setPurpose] = useState('Customer production')
   const [productRef, setProductRef] = useState('')
@@ -41,6 +47,11 @@ export function ProductionOrders() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [createSuccess, setCreateSuccess] = useState<string | null>(null)
+
+  const selectedOrder =
+    orders.find(
+      (order) => order.production_order_id === selectedOrderId,
+    ) ?? null
 
   async function loadOrders() {
     setLoading(true)
@@ -100,6 +111,52 @@ export function ProductionOrders() {
       )
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function handleReleaseOrder() {
+    if (!selectedOrder) {
+      return
+    }
+
+    if (selectedOrder.status !== 'PLANNED') {
+      setReleaseError(
+        `Order ${selectedOrder.order_number} cannot be released from status ${selectedOrder.status}.`,
+      )
+      return
+    }
+
+    setReleasing(true)
+    setReleaseError(null)
+    setReleaseSuccess(null)
+
+    try {
+      const released = await releaseProductionOrder(
+        selectedOrder.production_order_id,
+      )
+
+      setReleaseSuccess(
+        `Production order ${selectedOrder.order_number} released successfully.`,
+      )
+
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.production_order_id === released.production_order_id
+            ? {
+                ...order,
+                status: released.status,
+              }
+            : order,
+        ),
+      )
+    } catch (err) {
+      setReleaseError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to release production order.',
+      )
+    } finally {
+      setReleasing(false)
     }
   }
 
@@ -182,7 +239,6 @@ export function ProductionOrders() {
           <form onSubmit={handleCreateOrder} className="production-order-form">
             <div className="form-grid">
 
-
               <label>
                 <span>Purpose</span>
                 <input
@@ -264,8 +320,104 @@ export function ProductionOrders() {
           </form>
         </div>
 
-        {orders.length === 0 ? (
+        {selectedOrder ? (
+          <div className="production-order-details">
+            <div className="panel-heading">
+              <div>
+                <span className="eyebrow">ORDER DETAILS</span>
+                <h3>{selectedOrder.order_number}</h3>
+              </div>
 
+              <span className="production-order-status">
+                {selectedOrder.status}
+              </span>
+            </div>
+
+            <div className="production-order-detail-grid">
+              <div>
+                <span>Planned Quantity</span>
+                <strong>
+                  {formatQuantity(selectedOrder.planned_quantity)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Required Date</span>
+                <strong>
+                  {formatDate(selectedOrder.required_date)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Planned ETA</span>
+                <strong>
+                  {formatDate(selectedOrder.eta.planned_eta)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Current ETA</span>
+                <strong>
+                  {formatDate(selectedOrder.eta.current_eta)}
+                </strong>
+              </div>
+
+              <div>
+                <span>Risk</span>
+                <strong>
+                  {riskLabel(
+                    selectedOrder.eta.schedule_risk ??
+                      selectedOrder.eta.required_date_risk,
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Active Holds</span>
+                <strong>
+                  {selectedOrder.active_hold_count}
+                </strong>
+              </div>
+            </div>
+
+            {selectedOrder.eta.summary ? (
+              <div className="production-order-detail-summary">
+                <span>ETA Summary</span>
+                <p>{selectedOrder.eta.summary}</p>
+              </div>
+            ) : null}
+
+            {selectedOrder.eta.decision ? (
+              <div className="production-order-detail-summary">
+                <span>Decision</span>
+                <p>{selectedOrder.eta.decision}</p>
+              </div>
+            ) : null}
+
+            {releaseError ? (
+              <p className="form-error">{releaseError}</p>
+            ) : null}
+
+            {releaseSuccess ? (
+              <p className="form-success">{releaseSuccess}</p>
+            ) : null}
+
+            <div className="production-order-detail-actions">
+              {selectedOrder.status === 'PLANNED' ? (
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={handleReleaseOrder}
+                  disabled={releasing}
+                >
+                  {releasing ? 'Releasing...' : 'Release Order'}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {orders.length === 0 ? (
           <p className="muted">
             No production orders are available for the selected period.
           </p>
@@ -282,25 +434,39 @@ export function ProductionOrders() {
             </div>
 
             {orders.map((order) => {
-              const actionRequired =
-                order.eta.action_required ||
-                Boolean(order.eta.schedule_risk) ||
-                Boolean(order.eta.required_date_risk) ||
-                order.active_hold_count > 0
 
               return (
                 <div
-                  className="data-table-row"
+                  className={`data-table-row ${
+                    selectedOrderId === order.production_order_id
+                      ? 'production-order-row-selected'
+                      : ''
+                  }`}
                   key={order.production_order_id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View details for ${order.order_number}`}
+                  onClick={() => {
+                    setSelectedOrderId(order.production_order_id)
+                    setReleaseError(null)
+                    setReleaseSuccess(null)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setSelectedOrderId(order.production_order_id)
+                      setReleaseError(null)
+                      setReleaseSuccess(null)
+                    }
+                  }}
                 >
                   <span>
                     <strong>
                       {order.order_number}
                     </strong>
 
-                    {actionRequired ? (
-                      <small>Action required</small>
-                    ) : null}
+
+
                   </span>
 
                   <span>{order.status}</span>
@@ -336,10 +502,6 @@ export function ProductionOrders() {
     </section>
   )
 }
-
-
-
-
 
 
 

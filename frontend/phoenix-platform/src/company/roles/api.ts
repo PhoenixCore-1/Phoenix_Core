@@ -30,6 +30,20 @@ export async function getCompanyRoles(): Promise<CompanyRole[]> {
   return response.items ?? [];
 }
 
+export async function createCompanyRole(
+  code: string,
+  name: string
+): Promise<CompanyRole> {
+  const response = await api<CompanyRole>("/api/v1/company/roles", {
+    method: "POST",
+    body: JSON.stringify({
+      code,
+      name,
+    }),
+  });
+
+  return response;
+}
 export async function getCompanyRolePermissions(
   roleId: string
 ): Promise<CompanyPermission[]> {

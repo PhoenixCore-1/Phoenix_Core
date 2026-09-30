@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+﻿import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   CompanyPermission,
   CompanyRole,
+  createCompanyRole,
   getCompanyPermissions,
   getCompanyRolePermissions,
   getCompanyRoles,
@@ -14,6 +15,10 @@ export default function Roles() {
   const [selectedRole, setSelectedRole] = useState<CompanyRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateRole, setShowCreateRole] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleCode, setNewRoleCode] = useState("");
+  const [creatingRole, setCreatingRole] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +53,34 @@ export default function Roles() {
     };
   }, []);
 
+  async function handleCreateRole() {
+    const name = newRoleName.trim();
+    const code = newRoleCode.trim().toUpperCase();
+
+    if (!name || !code) {
+      setError("Role name and role code are required.");
+      return;
+    }
+
+    try {
+      setCreatingRole(true);
+      setError(null);
+
+      const createdRole = await createCompanyRole(code, name);
+
+      setRoles((current) => [...current, createdRole]);
+      setNewRoleName("");
+      setNewRoleCode("");
+      setShowCreateRole(false);
+      setSelectedRole(createdRole);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to create role."
+      );
+    } finally {
+      setCreatingRole(false);
+    }
+  }
   if (selectedRole) {
     return (
       <RoleDetails
@@ -91,6 +124,7 @@ export default function Roles() {
     );
   }
 
+
   return (
     <section className="company-page">
       <PageHeader />
@@ -104,12 +138,84 @@ export default function Roles() {
         onView={setSelectedRole}
       />
 
+      {showCreateRole && (
+        <div className="company-card" style={{ marginBottom: 16 }}>
+          <div className="company-section-heading">
+            <div>
+              <div className="company-page-eyebrow">CREATE ROLE</div>
+              <h2>New Company Role</h2>
+              <p className="muted">
+                Create a reusable role for this organisation.
+              </p>
+            </div>
+          </div>
+
+          <div className="company-form-grid">
+            <label>
+              <span className="field-label">Role Name</span>
+              <input
+                className="company-input"
+                value={newRoleName}
+                onChange={(event) =>
+                  setNewRoleName(event.target.value)
+                }
+                placeholder="Production Planner"
+                disabled={creatingRole}
+              />
+            </label>
+
+            <label>
+              <span className="field-label">Role Code</span>
+              <input
+                className="company-input"
+                value={newRoleCode}
+                onChange={(event) =>
+                  setNewRoleCode(event.target.value.toUpperCase())
+                }
+                placeholder="PRODUCTION.PLANNER"
+                disabled={creatingRole}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <button
+              type="button"
+              className="company-primary-button"
+              disabled={creatingRole}
+              onClick={() => void handleCreateRole()}
+            >
+              {creatingRole ? "Creating..." : "Create Role"}
+            </button>
+
+            <button
+              type="button"
+              className="small-btn"
+              disabled={creatingRole}
+              onClick={() => {
+                setShowCreateRole(false);
+                setNewRoleName("");
+                setNewRoleCode("");
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       <RoleSection
         title="Company Roles"
         description="Organisation-defined roles and access assignments."
         roles={companyRoles}
         action={
-          <button type="button" className="company-primary-button">
+          <button
+            type="button"
+            className="company-primary-button"
+            onClick={() => {
+              setError(null);
+              setShowCreateRole(true);
+            }}
+          >
             + Create Role
           </button>
         }
@@ -260,6 +366,7 @@ function RoleDetails({
   onBack: () => void;
 }) {
   const [permissions, setPermissions] = useState<CompanyPermission[]>([]);
+  const [permissionSearch, setPermissionSearch] = useState("");
   const [assignedPermissionIds, setAssignedPermissionIds] = useState<
     Set<string>
   >(new Set());
@@ -268,6 +375,10 @@ function RoleDetails({
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [showCreateRole, setShowCreateRole] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleCode, setNewRoleCode] = useState("");
+  const [creatingRole, setCreatingRole] = useState(false);
 
   const protectedRole =
     role.scope.toUpperCase() === "SYSTEM" ||
@@ -359,6 +470,19 @@ function RoleDetails({
     }
   }
 
+  const normalizedPermissionSearch = permissionSearch.trim().toLowerCase();
+
+  const filteredPermissions = permissions.filter((permission) => {
+    if (!normalizedPermissionSearch) {
+      return true;
+    }
+
+    return (
+      permission.name.toLowerCase().includes(normalizedPermissionSearch) ||
+      permission.code.toLowerCase().includes(normalizedPermissionSearch)
+    );
+  });
+
   return (
     <section className="company-page">
       <div className="company-role-detail-header">
@@ -432,8 +556,24 @@ function RoleDetails({
               <span>This role currently has no permissions assigned.</span>
             </div>
           ) : (
+            <>
+            {!protectedRole && (
+              <div className="company-permission-search">
+                <input
+                  type="search"
+                  value={permissionSearch}
+                  onChange={(event) => setPermissionSearch(event.target.value)}
+                  placeholder="Search permissions..."
+                  aria-label="Search permissions"
+                />
+                <span>
+                  {filteredPermissions.length} of {permissions.length} permissions
+                </span>
+              </div>
+            )}
+
             <div className="company-permission-list">
-              {permissions.map((permission) => {
+              {filteredPermissions.map((permission) => {
                 const assigned = assignedPermissionIds.has(permission.id);
                 const saving = savingPermissionId === permission.id;
 
@@ -463,6 +603,7 @@ function RoleDetails({
                 );
               })}
             </div>
+            </>
           )}
         </div>
       </div>
@@ -502,3 +643,4 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
+

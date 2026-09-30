@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    PHOENIX CORE PLATFORM
    GLOBAL STYLES
    ========================================================= */
@@ -382,7 +382,7 @@ button:disabled {
 }
 
 .kpi-card-action::after {
-  content: "Ã¢â€ â€™";
+  content: "ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢";
   font-size: 15px;
 }
 
@@ -1281,7 +1281,7 @@ textarea:focus {
 }
 
 /* =========================================================
-   COMPANY DETAIL â€” FINAL UI POLISH
+   COMPANY DETAIL Ã¢â‚¬â€ FINAL UI POLISH
    ========================================================= */
 
 .company-status-block {
@@ -1581,7 +1581,7 @@ textarea:focus {
 }
 
 /* =========================================================
-   SYSTEM HOME â€” COMPLETE VISUAL POLISH
+   SYSTEM HOME Ã¢â‚¬â€ COMPLETE VISUAL POLISH
    ========================================================= */
 
 .dashboard-sections {
@@ -6436,8 +6436,44 @@ textarea:focus-visible {
 .company-user-detail-view .company-access-role-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 16px;
   margin-top: 10px;
+  border: 1px solid var(--border-color, #d9dee7);
+  border-radius: 10px;
+  background: var(--surface-color, #ffffff);
+  box-sizing: border-box;
+}
+
+.company-user-detail-view .company-access-role-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.company-user-detail-view .company-access-role-row .field-label {
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.company-user-detail-view .company-access-role-row strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.company-user-detail-view .company-access-role-row p {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.company-user-detail-view .company-access-role-row .small-btn {
+  flex: 0 0 auto;
 }
 
 .company-user-detail-view .company-access-role-row .company-input {
@@ -6953,4 +6989,1258 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 10px;
   white-space: nowrap;
+}
+
+/* COMPANY USER DETAIL - ASSIGNED ROLES CLEANUP */
+.company-user-detail-view .company-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.company-user-detail-view .company-access-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  padding: 14px 16px;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.company-user-detail-view .company-role-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.company-user-detail-view .company-role-code {
+  display: block;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.company-user-detail-view .company-role-name {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.company-user-detail-view .company-role-remove {
+  flex: 0 0 auto;
+}
+
+/* COMPANY USER DETAIL - ADD ROLE */
+.company-user-detail-view .company-add-role-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.company-user-detail-view .company-add-role-row .company-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.company-user-detail-view .company-add-role-row .company-primary-action {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .company-user-detail-view .company-add-role-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .company-user-detail-view .company-add-role-row .company-primary-action {
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   COMPANY USER DETAILS - COMPACT ADMIN LAYOUT
+   ========================================================= */
+
+.company-user-detail-view {
+  min-width: 0;
+  padding: 20px 24px 24px;
+}
+
+.company-user-detail-header {
+  margin-bottom: 14px;
+}
+
+.company-user-detail-header h2 {
+  margin: 4px 0 2px;
+  line-height: 1.15;
+}
+
+.company-user-detail-header p {
+  margin: 0;
+}
+
+/* Compact status strip */
+.company-user-detail-view .company-user-status-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.company-user-detail-view .company-user-status-strip > div {
+  min-width: 0;
+  padding: 10px 14px;
+  border-right: 1px solid var(--line);
+}
+
+.company-user-detail-view .company-user-status-strip > div:last-child {
+  border-right: 0;
+}
+
+.company-user-detail-view .company-user-status-strip strong {
+  display: block;
+  margin-top: 2px;
+}
+
+/* Main compact grid */
+.company-user-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.6fr);
+  gap: 14px;
+  align-items: start;
+}
+
+/* Individual cards */
+.company-user-detail-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.company-user-detail-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.company-user-detail-card-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Account */
+.company-user-account-card {
+  grid-column: 1;
+}
+
+.company-user-account-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.company-user-account-grid > div {
+  min-width: 0;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+
+.company-user-account-grid > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.company-user-account-grid strong {
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* Roles */
+.company-user-roles-card {
+  grid-column: 2;
+}
+
+.company-user-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.company-user-detail-view .company-user-role-list .company-access-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+.company-user-detail-view .company-role-content {
+  min-width: 0;
+}
+
+.company-user-detail-view .company-role-code {
+  display: block;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.company-user-detail-view .company-role-name {
+  margin: 2px 0 0;
+  line-height: 1.3;
+}
+
+.company-user-detail-view .company-role-remove {
+  flex: 0 0 auto;
+}
+
+/* Add role */
+.company-user-detail-view .company-add-role-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.company-user-detail-view .company-add-role-row .company-input {
+  min-width: 0;
+}
+
+/* Permissions */
+.company-user-permissions-card {
+  grid-column: 2;
+}
+
+.company-permission-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.company-user-detail-view .company-permission-item {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.company-user-detail-view .company-permission-item strong {
+  display: block;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.company-user-detail-view .company-permission-item span {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* Password */
+.company-user-password-card {
+  grid-column: 1 / -1;
+}
+
+.company-user-password-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.company-user-password-controls .company-input {
+  min-width: 0;
+}
+
+.company-user-password-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.company-user-password-row .company-input {
+  min-width: 0;
+}
+
+.company-generated-password {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.company-generated-password > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.company-generated-password strong {
+  overflow-wrap: anywhere;
+}
+
+/* Loading */
+.company-user-detail-view .company-feedback {
+  margin: 0 0 14px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .company-user-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .company-user-account-card,
+  .company-user-roles-card,
+  .company-user-permissions-card,
+  .company-user-password-card {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .company-user-detail-view .company-user-status-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .company-user-detail-view .company-user-status-strip > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .company-user-detail-view .company-user-status-strip > div:last-child {
+    border-bottom: 0;
+  }
+
+  .company-permission-list {
+    grid-template-columns: 1fr;
+  }
+
+  .company-user-detail-view .company-add-role-row,
+  .company-user-password-controls,
+  .company-user-password-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   USER DETAILS - ACTIVE FINAL LAYOUT
+   main.tsx imports this stylesheet.
+   ============================================================ */
+
+.company-user-detail-view {
+  display: grid !important;
+  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.6fr) !important;
+  gap: 14px !important;
+  padding: 20px 24px 24px !important;
+  align-items: start !important;
+}
+
+.company-user-detail-view > .company-user-detail-header,
+.company-user-detail-view > .company-user-status-strip,
+.company-user-detail-view > .company-feedback {
+  grid-column: 1 / -1 !important;
+}
+
+.company-user-detail-view > .company-user-detail-section {
+  margin: 0 !important;
+  padding: 16px 18px !important;
+  min-width: 0 !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-detail-grid) {
+  grid-column: 1 !important;
+  grid-row: 3 !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-add-role-row) {
+  grid-column: 2 !important;
+  grid-row: 3 !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-permission-grid) {
+  grid-column: 2 !important;
+  grid-row: 4 !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-password-actions) {
+  grid-column: 1 !important;
+  grid-row: 4 !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-detail-grid)
+  .company-detail-grid {
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-add-role-row)
+  .company-detail-grid {
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.company-user-detail-view .company-access-role-row {
+  min-height: 0 !important;
+  padding: 10px 12px !important;
+}
+
+.company-user-detail-view .company-add-role-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 8px !important;
+  align-items: center !important;
+  margin-top: 10px !important;
+}
+
+.company-user-detail-view .company-permission-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  max-height: 360px !important;
+  overflow-y: auto !important;
+}
+
+.company-user-detail-view .company-permission-item {
+  padding: 7px 9px !important;
+}
+
+.company-user-detail-view .company-user-password-row {
+  margin-bottom: 10px !important;
+}
+
+.company-user-detail-view .company-password-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+@media (max-width: 900px) {
+  .company-user-detail-view {
+    grid-template-columns: 1fr !important;
+  }
+
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-detail-grid),
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-add-role-row),
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-permission-grid),
+  .company-user-detail-view
+    > .company-user-detail-section:has(.company-password-actions) {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .company-user-detail-view .company-permission-grid {
+    grid-template-columns: 1fr !important;
+    max-height: none !important;
+  }
+}
+/* ============================================================
+   USER DETAILS - DISTINCT AREA CARDS
+   ============================================================ */
+
+.company-user-detail-view {
+  gap: 12px 14px !important;
+}
+
+/* Every functional area becomes a visible card */
+.company-user-detail-view > .company-user-detail-section {
+  background: #ffffff !important;
+  border: 1px solid #d8e0ea !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 3px rgba(15, 35, 60, 0.06) !important;
+  padding: 16px 18px !important;
+}
+
+/* Give each card a subtle visual distinction */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-detail-grid) {
+  background: #fbfcfe !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-add-role-row) {
+  background: #ffffff !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-permission-grid) {
+  background: #fbfcfe !important;
+}
+
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-password-actions) {
+  background: #ffffff !important;
+}
+
+/* Section headings */
+.company-user-detail-view
+  > .company-user-detail-section
+  .section-heading-row {
+  padding-bottom: 10px !important;
+  margin-bottom: 10px !important;
+  border-bottom: 1px solid #e5eaf0 !important;
+}
+
+/* Keep the small explanatory text aligned with the heading */
+.company-user-detail-view
+  > .company-user-detail-section
+  .section-heading-row .muted {
+  font-size: 10px !important;
+}
+
+/* Account fields look like contained information rows */
+.company-user-detail-view
+  > .company-user-detail-section:has(.company-detail-grid)
+  .company-detail-grid > div {
+  background: #ffffff !important;
+  border: 1px solid #e4e9ef !important;
+  border-radius: 7px !important;
+  padding: 9px 11px !important;
+}
+
+/* Assigned roles */
+.company-user-detail-view .company-access-role-row {
+  background: #f8fafc !important;
+  border: 1px solid #dfe6ee !important;
+  border-radius: 7px !important;
+}
+
+/* Add-role controls sit inside a subtle container */
+.company-user-detail-view .company-add-role-row {
+  background: #f5f8fb !important;
+  border: 1px solid #e1e7ee !important;
+  border-radius: 7px !important;
+  padding: 8px !important;
+  margin-top: 10px !important;
+}
+
+/* Permissions */
+.company-user-detail-view .company-permission-item {
+  background: #ffffff !important;
+  border: 1px solid #e1e6ec !important;
+  border-radius: 6px !important;
+}
+
+/* Password controls */
+.company-user-detail-view .company-user-password-row {
+  background: #f7f9fb !important;
+  border: 1px solid #e1e7ee !important;
+  border-radius: 7px !important;
+  padding: 8px !important;
+}
+
+.company-user-detail-view .company-password-actions {
+  margin-top: 8px !important;
+}
+
+/* Slightly stronger separation from the page itself */
+.company-user-detail-view {
+  background: #f8fafc !important;
+}
+/* ============================================================
+   ASSIGNED ROLES - COMPACT HORIZONTAL ROWS
+   ============================================================ */
+
+.company-user-detail-view .company-access-role-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 10px 12px !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+.company-user-detail-view .company-access-role-row > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+
+.company-user-detail-view .company-access-role-row .field-label {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+.company-user-detail-view .company-access-role-row strong,
+.company-user-detail-view .company-access-role-row .company-role-code {
+  display: inline-block !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+.company-user-detail-view .company-access-role-row p,
+.company-user-detail-view .company-access-role-row .company-role-name {
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.company-user-detail-view .company-access-role-row .small-btn,
+.company-user-detail-view .company-access-role-row .company-role-remove {
+  justify-self: end !important;
+  align-self: center !important;
+  margin: 0 !important;
+}
+
+/* Keep multiple roles visually separated without large gaps */
+.company-user-detail-view .company-user-role-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* Add-role area stays compact underneath the role list */
+.company-user-detail-view .company-add-role-row {
+  margin-top: 8px !important;
+}
+/* ============================================================
+   ASSIGNED ROLES - FLATTEN ROLE CONTENT HORIZONTALLY
+   ============================================================ */
+
+.company-user-detail-view .company-access-role-row .company-role-content {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+
+.company-user-detail-view .company-access-role-row .company-role-content .field-label {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+.company-user-detail-view .company-access-role-row .company-role-content .company-role-code {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+.company-user-detail-view .company-access-role-row .company-role-content .company-role-name {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Make the role list use the available width cleanly */
+.company-user-detail-view .company-user-role-list {
+  width: 100% !important;
+}
+
+/* Keep Remove aligned to the right */
+.company-user-detail-view .company-access-role-row .company-role-remove {
+  flex: 0 0 auto !important;
+  justify-self: end !important;
+}
+/* ============================================================
+   USER DETAILS - FINAL SPACING POLISH
+   ============================================================ */
+
+/* Reduce the large gap between identity and status */
+.company-user-detail-view .company-user-detail-header {
+  padding-bottom: 8px !important;
+  margin-bottom: 0 !important;
+}
+
+.company-user-detail-view .company-user-detail-profile {
+  margin-bottom: 4px !important;
+}
+
+.company-user-detail-view .company-user-status-strip {
+  margin-top: 0 !important;
+  padding-top: 4px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Keep the main cards closer to the status information */
+.company-user-detail-view > .company-user-detail-section {
+  padding: 14px 16px !important;
+}
+
+/* Assigned Roles rows: tighter and cleaner */
+.company-user-detail-view .company-access-role-row {
+  padding: 7px 10px !important;
+  min-height: 38px !important;
+}
+
+.company-user-detail-view .company-user-role-list {
+  gap: 5px !important;
+}
+
+/* Add-role control */
+.company-user-detail-view .company-add-role-row {
+  padding: 6px !important;
+  margin-top: 6px !important;
+}
+
+/* Reduce heading whitespace */
+.company-user-detail-view
+  > .company-user-detail-section
+  .section-heading-row {
+  padding-bottom: 7px !important;
+  margin-bottom: 7px !important;
+}
+/* ============================================================
+   ROLE PERMISSIONS - CLEAN SEARCH + COMPACT PERMISSION GRID
+   ============================================================ */
+
+.company-role-detail-card .company-permission-search {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 14px 0 12px !important;
+  padding: 10px !important;
+  background: #f6f8fb !important;
+  border: 1px solid #dce3eb !important;
+  border-radius: 8px !important;
+}
+
+.company-role-detail-card .company-permission-search input {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 38px !important;
+  padding: 0 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  font-size: 13px !important;
+  color: #172b45 !important;
+  outline: none !important;
+}
+
+.company-role-detail-card .company-permission-search input:focus {
+  border-color: #64748b !important;
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.12) !important;
+}
+
+.company-role-detail-card .company-permission-search span {
+  flex: 0 0 auto !important;
+  min-width: 125px !important;
+  text-align: right !important;
+  font-size: 11px !important;
+  color: #64748b !important;
+}
+
+/* Two-column permission catalogue */
+.company-role-detail-card .company-permission-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px 10px !important;
+  max-height: 560px !important;
+  overflow-y: auto !important;
+  padding: 2px !important;
+}
+
+/* Individual permission */
+.company-role-detail-card .company-permission-row {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 9px !important;
+  min-height: 52px !important;
+  padding: 8px 10px !important;
+  margin: 0 !important;
+  background: #ffffff !important;
+  border: 1px solid #e1e7ee !important;
+  border-radius: 7px !important;
+  cursor: pointer !important;
+  transition: border-color 120ms ease, background 120ms ease !important;
+}
+
+.company-role-detail-card .company-permission-row:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+.company-role-detail-card .company-permission-row input[type="checkbox"] {
+  width: 15px !important;
+  height: 15px !important;
+  margin: 0 !important;
+}
+
+.company-role-detail-card .company-permission-row > div {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+.company-role-detail-card .company-permission-row strong {
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  color: #172b45 !important;
+}
+
+.company-role-detail-card .company-permission-row code {
+  display: block !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  color: #64748b !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.company-role-detail-card .company-permission-saving {
+  font-size: 10px !important;
+  color: #64748b !important;
+}
+
+/* Empty search result */
+.company-role-detail-card .company-permission-list .company-empty-state {
+  grid-column: 1 / -1 !important;
+  padding: 24px !important;
+  text-align: center !important;
+}
+
+/* Smaller screens */
+@media (max-width: 900px) {
+  .company-role-detail-card .company-permission-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .company-role-detail-card .company-permission-search {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .company-role-detail-card .company-permission-search span {
+    text-align: left !important;
+  }
+}
+
+/* Phoenix Production Order Details + Release UI */
+
+
+
+.production-order-details {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+}
+
+.production-order-status {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.production-order-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.production-order-detail-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.production-order-detail-grid span,
+.production-order-detail-summary > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+.production-order-detail-summary {
+  margin-top: 1rem;
+}
+
+.production-order-detail-summary p {
+  margin: 0.35rem 0 0;
+}
+
+.production-order-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 800px) {
+  .production-order-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .production-order-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Production order table interaction */
+
+.data-table-row.production-order-row-selected {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.data-table-row.production-order-row-selected:hover {
+  background: rgba(0, 0, 0, 0.045);
+}
+
+.data-table-row.production-order-row-selected:focus {
+  outline: none;
+}
+
+.data-table-row.production-order-row-selected:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.15);
+  outline-offset: -2px;
+}
+
+
+/* COMPANY PLATFORM EXPANDABLE SIDEBAR */
+
+.company-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.company-nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-nav-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.company-nav-group-chevron {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.company-nav-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 8px;
+}
+
+.company-nav-group-items button {
+  width: 100%;
+  text-align: left;
+}
+
+.company-nav-placeholder {
+  opacity: 0.65;
+  cursor: default;
+}
+
+/* Phoenix Core v1.1.0 Company Shell - Company Search dropdown */
+.company-topbar .company-search {
+  position: relative;
+  overflow: visible;
+}
+
+.company-topbar .company-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.company-topbar .company-search-result {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.company-topbar .company-search-result:hover,
+.company-topbar .company-search-result:focus-visible {
+  background: #f1f5f9;
+  outline: none;
+}
+
+.company-topbar .company-search-no-results {
+  padding: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Phoenix Core v1.1.0 - Imports / Exports landing page */
+.imports-exports-landing {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.imports-exports-landing .company-placeholder-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.imports-exports-landing .company-placeholder-eyebrow {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.imports-exports-landing h2 {
+  margin: 4px 0 6px;
+  color: #1e293b;
+  font-size: 1.35rem;
+}
+
+.imports-exports-landing .company-placeholder-header p {
+  margin: 0;
+  max-width: 720px;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.imports-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.imports-section-heading {
+  margin-bottom: 2px;
+}
+
+.imports-section-heading h3 {
+  margin: 0 0 4px;
+  color: #1e293b;
+  font-size: 0.96rem;
+}
+
+.imports-section-heading p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.imports-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.imports-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 96px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.imports-card strong {
+  display: block;
+  color: #1e293b;
+  font-size: 0.88rem;
+}
+
+.imports-card p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.imports-card button {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.imports-card button:disabled {
+  cursor: not-allowed;
+}
+
+.imports-card-status {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.imports-history-card {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .imports-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Phoenix Core v1.1.0 - Customer Master import screen */
+.customer-master-import {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.customer-import-file-card {
+  align-items: center;
+}
+
+.customer-master-import .imports-file-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customer-master-import .imports-file-button:hover {
+  background: #f8fafc;
+}
+
+.customer-master-import .imports-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.customer-import-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.customer-master-import .customer-import-actions button {
+  min-width: 88px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.customer-master-import .customer-import-actions .secondary-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #475569;
+}
+
+.customer-master-import .customer-import-actions .primary-btn {
+  border: 1px solid #1e293b;
+  background: #1e293b;
+  color: #fff;
+}
+
+.customer-master-import .customer-import-actions .primary-btn:disabled {
+  border-color: #e2e8f0;
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .customer-import-file-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .customer-import-actions {
+    flex-direction: column-reverse;
+  }
+
+  .customer-master-import .customer-import-actions button {
+    width: 100%;
+  }
 }

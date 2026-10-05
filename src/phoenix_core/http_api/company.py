@@ -1,13 +1,19 @@
 ﻿"""Company Platform HTTP endpoints backed by Phoenix Core authority."""
 
+import hashlib
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, File, Request, UploadFile
 
 from phoenix_core.http_api.authorization import resolve_request_context
 from phoenix_company.application.users import CompanyUserApplicationService
 from phoenix_company.application.activity import CompanyActivityApplicationService
 from phoenix_company.application.context import CompanyContextApplicationService
+from phoenix_company.application.customer_imports import (
+    CustomerImportApplicationService,
+)
 from phoenix_company.application.roles import CompanyRoleApplicationService
 from phoenix_company.application.role_queries import CompanyRoleQueryService
 
@@ -30,6 +36,10 @@ def _role_service(request: Request):
 
 def _role_query_service(request: Request):
     return CompanyRoleQueryService(request.app.state.core_api)
+
+
+def _customer_import_service(request: Request):
+    return CustomerImportApplicationService(request.app.state.core_api)
 
 
 def _organisation(context):
@@ -260,3 +270,105 @@ async def permissions(request: Request):
     return {"data": data, "request_id": context.request_id}
 
 
+
+
+@router.post("/imports/customer-master")
+async def upload_customer_master(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    context = await resolve_request_context(request)
+
+    if not file.filename:
+        from phoenix_core.errors import ValidationError
+
+        raise ValidationError("A Customer Master file is required.")
+
+    suffix = Path(file.filename).suffix.lower()
+
+    if suffix not in {".xlsx", ".xlsm", ".csv"}:
+        from phoenix_core.errors import ValidationError
+
+        raise ValidationError(
+            "Unsupported Customer Master file type. "
+            "Only .xlsx, .xlsm, and .csv files are supported."
+        )
+
+    content = await file.read()
+
+    if not content:
+        from phoenix_core.errors import ValidationError
+
+        raise ValidationError(
+            "The selected Customer Master file is empty."
+        )
+
+    file_hash = hashlib.sha256(content).hexdigest()
+
+    with tempfile.NamedTemporaryFile(
+        suffix=suffix,
+        delete=False,
+    ) as temporary_file:
+        temporary_file.write(content)
+        temporary_path = Path(temporary_file.name)
+
+    try:
+        result = _customer_import_service(request).create_import_job(
+            context,
+            source_filename=file.filename,
+            source_system="PHOENIX",
+            file_hash=file_hash,
+            total_rows=0,
+        )
+
+        job_id = result.data["id"]
+
+        validation = _customer_import_service(request).validate_import_job(
+            context,
+            job_id,
+            file_path=temporary_path,
+        )
+
+        return {
+            "data": validation.data,
+            "request_id": validation.request_id,
+        }
+
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+@router.get("/imports/{job_id}/preview")
+async def preview_customer_master_import(
+    request: Request,
+    job_id: str,
+):
+    context = await resolve_request_context(request)
+
+    result = _customer_import_service(request).get_import_preview(
+        context,
+        job_id,
+    )
+
+    return {
+        "data": result.data,
+        "request_id": result.request_id,
+    }
+
+
+@router.post("/imports/{job_id}/confirm")
+async def confirm_customer_master_import(
+    request: Request,
+    job_id: str,
+):
+    context = await resolve_request_context(request)
+
+    result = _customer_import_service(request).confirm_import(
+        context,
+        job_id,
+    )
+
+    return {
+        "data": result.data,
+        "request_id": result.request_id,
+    }

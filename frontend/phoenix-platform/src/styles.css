@@ -7989,7 +7989,7 @@ textarea:focus-visible {
   cursor: default;
 }
 
-/* Phoenix Core v1.1.0 Company Shell - Company Search dropdown */
+/* Phoenix Core v1.0.0-alpha.1 Company Shell - Company Search dropdown */
 .company-topbar .company-search {
   position: relative;
   overflow: visible;
@@ -8036,7 +8036,7 @@ textarea:focus-visible {
   font-size: 12px;
 }
 
-/* Phoenix Core v1.1.0 - Imports / Exports landing page */
+/* Phoenix Core v1.0.0-alpha.1 - Imports / Exports landing page */
 .imports-exports-landing {
   display: flex;
   flex-direction: column;
@@ -8157,7 +8157,7 @@ textarea:focus-visible {
   }
 }
 
-/* Phoenix Core v1.1.0 - Customer Master import screen */
+/* Phoenix Core v1.0.0-alpha.1 - Customer Master import screen */
 .customer-master-import {
   display: flex;
   flex-direction: column;

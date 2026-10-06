@@ -450,12 +450,12 @@ The release note and final release commit/tag should be created only after the C
 
 ## Handover Position
 
-Phoenix Core V1.1.0 currently represents:
+The current Phoenix Core development architecture is represented by:
 
     Phoenix Core
     |-- System Platform
     |-- Company Platform
-    -- User Platform
+    |-- User Platform
           -- Production 360
                 |-- Production API
                 |-- Production Domain

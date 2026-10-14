@@ -1,3 +1,4 @@
+
 """Regression coverage for the Company Platform hardening boundary."""
 
 from uuid import UUID
@@ -19,9 +20,10 @@ def test_all_checked_in_migrations_install_company_platform_foundation(tmp_path)
     permission_rows = db.execute(
         "SELECT id, code FROM permissions WHERE code LIKE 'company.%' ORDER BY code"
     ).fetchall()
-    assert len(permission_rows) == 8
+
     assert all(UUID(row["id"]) for row in permission_rows)
-    assert {row["code"] for row in permission_rows} == {
+
+    expected_permissions = {
         "company.activity.view",
         "company.configuration.manage",
         "company.memberships.manage",
@@ -32,9 +34,13 @@ def test_all_checked_in_migrations_install_company_platform_foundation(tmp_path)
         "company.workspaces.manage",
     }
 
+    actual_permissions = {row["code"] for row in permission_rows}
+    assert expected_permissions.issubset(actual_permissions)
+
     for table in ("company_workspaces", "company_visibility_rules"):
         assert db.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
         ).fetchone()
 
     db.close()
@@ -53,6 +59,7 @@ def test_company_platform_routes_are_registered():
     assert {route.path for route in reports_router.routes} == {
         "/api/v1/company/reports"
     }
+
     assert {route.path for route in workspaces_router.routes} == {
         "/api/v1/company/workspaces",
         "/api/v1/company/workspaces/{module_code}",

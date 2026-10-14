@@ -1,3 +1,6 @@
+
+"""System Platform application service for company lifecycle."""
+
 from datetime import datetime
 from uuid import UUID
 
@@ -27,13 +30,22 @@ class SystemCompanyApplicationService:
                     org.created_at.isoformat(),
                 ),
             )
+
+            self.core_api.role_service.provision_company_admin_role(
+                org.id,
+                commit=False,
+            )
+
             self.db.commit()
+
         except Exception as exc:
             self.db.rollback()
+
             if "UNIQUE" in str(exc).upper():
                 raise ConflictError(
                     "Organisation code or name already exists."
                 ) from exc
+
             raise
 
         return org
@@ -84,12 +96,15 @@ class SystemCompanyApplicationService:
                 ),
             )
             self.db.commit()
+
         except Exception as exc:
             self.db.rollback()
+
             if "UNIQUE" in str(exc).upper():
                 raise ConflictError(
                     "Organisation code or name already exists."
                 ) from exc
+
             raise
 
         return self.get_company(organisation_id)

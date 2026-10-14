@@ -315,7 +315,7 @@ def create_development_app(
             value=token,
             httponly=True,
             samesite="lax",
-            secure=False,
+            secure=True,
             path="/",
         )
 

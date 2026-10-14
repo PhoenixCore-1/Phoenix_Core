@@ -1,10 +1,17 @@
+
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from phoenix_core.licensing.service import EntitlementService
 from phoenix_core.http_api.app import create_development_app
 from phoenix_core.users.application import UserApplicationService
-from phoenix_company.application.memberships import CompanyMembershipApplicationService
-from phoenix_system.application.companies import SystemCompanyApplicationService
+from phoenix_company.application.memberships import (
+    CompanyMembershipApplicationService,
+)
+from phoenix_system.application.companies import (
+    SystemCompanyApplicationService,
+)
 
 
 def client(tmp_path):
@@ -47,9 +54,7 @@ def client(tmp_path):
         org.id,
     )
 
-    import uuid
-
-    mid = uuid.uuid4()
+    module_id = uuid4()
     core_api.db.execute(
         """
         INSERT INTO modules(
@@ -58,7 +63,7 @@ def client(tmp_path):
         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """,
         (
-            str(mid),
+            str(module_id),
             "sales_360",
             "Sales 360",
             "0.1.0",
@@ -66,54 +71,45 @@ def client(tmp_path):
         ),
     )
 
-    entitlement_service.grant(
-        org.id,
-        mid,
-    )
+    entitlement_service.grant(org.id, module_id)
     core_api.db.commit()
 
-    return (
-        TestClient(
-            app,
-            base_url="https://testserver",
-        ),
-        org,
-    )
+    return TestClient(app, base_url="https://testserver"), org
 
 
 def test_baseline_company_user_flow(tmp_path):
-    c, org = client(tmp_path)
+    c, _ = client(tmp_path)
 
-    assert c.post(
+    login_response = c.post(
         "/api/v1/auth/login",
         json={
             "username": "company.admin",
             "password": "Phoenix-V1-Company-2026!",
         },
-    ).status_code == 200
-
-    context_response = c.get(
-        "/api/v1/baseline/context"
     )
-    print("CONTEXT STATUS:", context_response.status_code)
-    print("CONTEXT BODY:", context_response.json())
+    assert login_response.status_code == 200
+
+    context_response = c.get("/api/v1/baseline/context")
+
+    assert context_response.status_code == 200
 
     ctx = context_response.json()["data"]
-
     assert ctx["company"]["code"] == "DEMO"
     assert ctx["user"]["platform_level"] == "COMPANY_ADMIN"
     assert ctx["modules"][0]["active"] is True
 
+
 def test_baseline_system_can_create_company_and_activate_module(tmp_path):
     c, _ = client(tmp_path)
 
-    assert c.post(
+    login_response = c.post(
         "/api/v1/auth/login",
         json={
             "username": "system.admin",
             "password": "Phoenix-V1-System-2026!",
         },
-    ).status_code == 200
+    )
+    assert login_response.status_code == 200
 
     new = c.post(
         "/api/v1/system/companies",
@@ -123,30 +119,23 @@ def test_baseline_system_can_create_company_and_activate_module(tmp_path):
         },
     )
 
-    print("CREATE COMPANY STATUS:", new.status_code)
-    print("CREATE COMPANY BODY:", new.json())
     assert new.status_code == 200
 
-    cid = new.json()["data"]["id"]
+    company_id = new.json()["data"]["id"]
 
-    assert c.post(
-        f"/api/v1/system/companies/{cid}/modules/sales_360/activate"
-    ).status_code == 200
+    activation_response = c.post(
+        f"/api/v1/system/companies/{company_id}/modules/sales_360/activate"
+    )
 
-    assert c.post(
-        f"/api/v1/system/companies/{cid}/admin",
+    assert activation_response.status_code == 200
+
+    admin_response = c.post(
+        f"/api/v1/system/companies/{company_id}/admin",
         json={
             "username": "acme.admin",
             "display_name": "Acme Admin",
             "password": "Acme-V1-Admin-2026!",
         },
-    ).status_code == 200
+    )
 
-
-
-
-
-
-
-
-
+    assert admin_response.status_code == 200

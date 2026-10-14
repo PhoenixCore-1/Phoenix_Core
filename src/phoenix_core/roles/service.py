@@ -1,4 +1,5 @@
-"""Core Shared role and permission persistence service."""
+
+"""Core shared role and permission persistence service."""
 
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -17,9 +18,7 @@ from phoenix_core.organisations.membership import Membership
 class RoleService:
     """Authoritative persistence/application service for roles and permissions."""
 
-    _PROTECTED_ROLE_CODES = frozenset({
-        "COMPANY.ADMIN",
-    })
+    _PROTECTED_ROLE_CODES = frozenset({"COMPANY.ADMIN"})
 
     def __init__(self, db):
         self.db = db
@@ -41,6 +40,11 @@ class RoleService:
         name: str,
         scope: str = "ORGANISATION",
     ) -> Role:
+        if code.strip().upper() in self._PROTECTED_ROLE_CODES:
+            raise AuthorizationError(
+                "Protected system roles can only be provisioned by the system."
+            )
+
         role = Role.create(organisation_id, code, name, scope)
 
         if not self.db.execute(
@@ -53,8 +57,8 @@ class RoleService:
             self.db.execute(
                 """
                 INSERT INTO roles(
-                    id,organisation_id,code,name,scope,status,created_at
-                ) VALUES (?,?,?,?,?,?,?)
+                    id, organisation_id, code, name, scope, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(role.id),
@@ -77,6 +81,71 @@ class RoleService:
 
         return role
 
+    def provision_company_admin_role(
+        self,
+        organisation_id: UUID,
+        *,
+        commit: bool = True,
+    ) -> Role:
+        """Provision the protected COMPANY.ADMIN role for a company."""
+
+        organisation = self.db.execute(
+            "SELECT id FROM organisations WHERE id=?",
+            (str(organisation_id),),
+        ).fetchone()
+
+        if not organisation:
+            raise NotFoundError("Organisation not found.")
+
+        existing = self.db.execute(
+            """
+            SELECT id, scope, status
+            FROM roles
+            WHERE organisation_id=? AND code='COMPANY.ADMIN'
+            """,
+            (str(organisation_id),),
+        ).fetchone()
+
+        if existing:
+            if (
+                existing["scope"] != "ORGANISATION"
+                or existing["status"] != "ACTIVE"
+            ):
+                raise ValidationError(
+                    "Existing COMPANY.ADMIN role has invalid scope or status."
+                )
+
+            return self.get_role(UUID(existing["id"]))
+
+        role = Role.create(
+            organisation_id,
+            "COMPANY.ADMIN",
+            "Company Administrator",
+            "ORGANISATION",
+        )
+
+        self.db.execute(
+            """
+            INSERT INTO roles(
+                id, organisation_id, code, name, scope, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(role.id),
+                str(role.organisation_id),
+                role.code,
+                role.name,
+                role.scope,
+                role.status,
+                role.created_at.isoformat(),
+            ),
+        )
+
+        if commit:
+            self.db.commit()
+
+        return role
+
     def _ensure_role_assignable(self, role_id: UUID) -> Role:
         role = self.get_role(role_id)
 
@@ -90,7 +159,7 @@ class RoleService:
     def get_membership(self, membership_id: UUID) -> Membership:
         row = self.db.execute(
             """
-            SELECT id,identity_id,organisation_id,status,created_at
+            SELECT id, identity_id, organisation_id, status, created_at
             FROM organisation_memberships
             WHERE id=?
             """,
@@ -110,7 +179,16 @@ class RoleService:
 
     def list_assigned_roles(self, membership_id: UUID) -> list[Role]:
         rows = self.db.execute(
-            "SELECT id,organisation_id,code,name,scope,status,created_at FROM roles WHERE id IN (SELECT role_id FROM role_assignments WHERE membership_id=?) ORDER BY name",
+            """
+            SELECT id, organisation_id, code, name, scope, status, created_at
+            FROM roles
+            WHERE id IN (
+                SELECT role_id
+                FROM role_assignments
+                WHERE membership_id=?
+            )
+            ORDER BY name
+            """,
             (str(membership_id),),
         ).fetchall()
 
@@ -165,8 +243,8 @@ class RoleService:
             self.db.execute(
                 """
                 INSERT INTO role_assignments(
-                    id,membership_id,role_id,created_at
-                ) VALUES (?,?,?,datetime('now'))
+                    id, membership_id, role_id, created_at
+                ) VALUES (?, ?, ?, datetime('now'))
                 """,
                 (assignment_id, str(membership_id), str(role_id)),
             )
@@ -182,7 +260,7 @@ class RoleService:
     def get_role(self, role_id: UUID) -> Role:
         row = self.db.execute(
             """
-            SELECT id,organisation_id,code,name,scope,status,created_at
+            SELECT id, organisation_id, code, name, scope, status, created_at
             FROM roles
             WHERE id=?
             """,
@@ -209,7 +287,7 @@ class RoleService:
         status: str | None = None,
     ) -> list[Role]:
         sql = """
-            SELECT id,organisation_id,code,name,scope,status,created_at
+            SELECT id, organisation_id, code, name, scope, status, created_at
             FROM roles
             WHERE organisation_id=?
         """
@@ -237,6 +315,7 @@ class RoleService:
             )
             for row in rows
         ]
+
     def update_role(
         self,
         role_id: UUID,
@@ -247,9 +326,14 @@ class RoleService:
         current = self._ensure_role_mutable(role_id)
         updated = current.with_details(code=code, name=name)
 
+        if updated.code in self._PROTECTED_ROLE_CODES:
+            raise AuthorizationError(
+                "Protected system role codes cannot be assigned to ordinary roles."
+            )
+
         try:
             self.db.execute(
-                "UPDATE roles SET code=?,name=? WHERE id=?",
+                "UPDATE roles SET code=?, name=? WHERE id=?",
                 (updated.code, updated.name, str(role_id)),
             )
             self.db.commit()
@@ -283,15 +367,15 @@ class RoleService:
 
     def enable_role(self, role_id: UUID) -> Role:
         return self.set_role_status(role_id, "ACTIVE")
+
     def create_permission(self, code: str, name: str) -> Permission:
         permission = Permission.create(code, name)
 
         try:
             self.db.execute(
                 """
-                INSERT INTO permissions(
-                    id,code,name,created_at
-                ) VALUES (?,?,?,?)
+                INSERT INTO permissions(id, code, name, created_at)
+                VALUES (?, ?, ?, ?)
                 """,
                 (
                     str(permission.id),
@@ -314,7 +398,7 @@ class RoleService:
     def get_permission(self, permission_id: UUID) -> Permission:
         row = self.db.execute(
             """
-            SELECT id,code,name,created_at
+            SELECT id, code, name, created_at
             FROM permissions
             WHERE id=?
             """,
@@ -332,15 +416,15 @@ class RoleService:
         )
 
     def get_permission_by_code(self, code: str) -> Permission:
-        code = code.strip().lower()
+        normalised_code = code.strip().lower()
 
         row = self.db.execute(
             """
-            SELECT id,code,name,created_at
+            SELECT id, code, name, created_at
             FROM permissions
             WHERE code=?
             """,
-            (code,),
+            (normalised_code,),
         ).fetchone()
 
         if not row:
@@ -352,10 +436,11 @@ class RoleService:
             row["name"],
             datetime.fromisoformat(row["created_at"]),
         )
+
     def list_permissions(self) -> list[Permission]:
         rows = self.db.execute(
             """
-            SELECT id,code,name,created_at
+            SELECT id, code, name, created_at
             FROM permissions
             ORDER BY code
             """
@@ -383,7 +468,7 @@ class RoleService:
 
         try:
             self.db.execute(
-                "UPDATE permissions SET code=?,name=? WHERE id=?",
+                "UPDATE permissions SET code=?, name=? WHERE id=?",
                 (
                     updated.code,
                     updated.name,
@@ -400,12 +485,13 @@ class RoleService:
             raise
 
         return updated
+
     def assign_protected_company_admin(
         self,
         membership_id: UUID,
         role_id: UUID,
     ) -> str:
-        """Assign the protected COMPANY.ADMIN role during system provisioning."""
+        """Assign COMPANY.ADMIN through the trusted system provisioning path."""
 
         membership = self.db.execute(
             """
@@ -452,8 +538,8 @@ class RoleService:
             self.db.execute(
                 """
                 INSERT INTO role_assignments(
-                    id,membership_id,role_id,created_at
-                ) VALUES (?,?,?,datetime('now'))
+                    id, membership_id, role_id, created_at
+                ) VALUES (?, ?, ?, datetime('now'))
                 """,
                 (
                     assignment_id,
@@ -464,15 +550,12 @@ class RoleService:
             self.db.commit()
         except Exception as exc:
             self.db.rollback()
-
             if "UNIQUE" in str(exc).upper():
-                raise ConflictError(
-                    "Role is already assigned."
-                ) from exc
-
+                raise ConflictError("Role is already assigned.") from exc
             raise
 
         return assignment_id
+
     def grant_permission(
         self,
         role_id: UUID,
@@ -490,8 +573,8 @@ class RoleService:
             self.db.execute(
                 """
                 INSERT INTO role_permissions(
-                    role_id,permission_id,created_at
-                ) VALUES (?,?,datetime('now'))
+                    role_id, permission_id, created_at
+                ) VALUES (?, ?, datetime('now'))
                 """,
                 (str(role.id), str(permission.id)),
             )
@@ -531,7 +614,7 @@ class RoleService:
 
         rows = self.db.execute(
             """
-            SELECT p.id,p.code,p.name,p.created_at
+            SELECT p.id, p.code, p.name, p.created_at
             FROM role_permissions rp
             JOIN permissions p ON p.id=rp.permission_id
             WHERE rp.role_id=?
@@ -549,6 +632,7 @@ class RoleService:
             )
             for row in rows
         ]
+
     def remove_role(
         self,
         membership_id: UUID,
@@ -566,7 +650,3 @@ class RoleService:
         self.db.commit()
 
         return cur.rowcount == 1
-
-
-
-

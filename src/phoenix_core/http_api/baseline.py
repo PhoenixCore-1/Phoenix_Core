@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Request
 
 from phoenix_core.errors import AuthenticationError
-from phoenix_core.security.context import RequestContext
 
 router = APIRouter(
     prefix="/api/v1/baseline",
@@ -127,12 +126,8 @@ def context(request: Request):
                     "status": organisation["status"],
                 }
             ),
-            "modules": _modules(
-                api,
-                organisation_id,
-            ),
+            "modules": _modules(api, organisation_id),
             "permissions": sorted(resolved.permissions),
             "entitlements": sorted(resolved.entitlements),
         },
     }
-

@@ -5,6 +5,9 @@ from fastapi.testclient import TestClient
 
 from phoenix_core.licensing.service import EntitlementService
 from phoenix_core.http_api.app import create_development_app
+from phoenix_core.http_api.authorization import (
+    _require_password_reset_complete,
+)
 from phoenix_core.users.application import UserApplicationService
 from phoenix_company.application.memberships import (
     CompanyMembershipApplicationService,

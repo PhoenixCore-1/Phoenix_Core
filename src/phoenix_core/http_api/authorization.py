@@ -12,18 +12,21 @@ from fastapi import Request
 
 from phoenix_core.errors import AuthenticationError, AuthorizationError
 
-
 async def resolve_request_context(request: Request):
-    """Resolve the authenticated Core RequestContext for an HTTP request."""
+    """Resolve Core context and enforce mandatory password reset."""
     core_api = request.app.state.core_api
     session_id = _session_id(request, core_api)
     organisation_id = _organisation_id(request)
-    return core_api.resolve_context(
+
+    context = core_api.resolve_context(
         request_id=request.state.request_id,
         session_id=session_id,
         organisation_id=organisation_id,
     )
 
+    _require_password_reset_complete(request, context)
+
+    return context
 
 def require_permission(permission: str):
     """Require a Core permission before entering a route handler."""
@@ -70,3 +73,25 @@ def _organisation_id(request: Request):
         return UUID(value)
     except ValueError as exc:
         raise AuthenticationError("Invalid organisation context.") from exc
+
+
+def _require_password_reset_complete(request: Request, context) -> None:
+    """Block protected HTTP routes until a mandatory password reset is complete."""
+    core_api = request.app.state.core_api
+
+    row = core_api.db.execute(
+        """
+        SELECT password_reset_required
+        FROM users
+        WHERE identity_id=? AND status='ACTIVE'
+        """,
+        (str(context.identity_id),),
+    ).fetchone()
+
+    if not row:
+        raise AuthenticationError("Authenticated user was not found.")
+
+    if bool(row["password_reset_required"]):
+        raise AuthorizationError(
+            "Password change required before accessing protected functionality."
+        )

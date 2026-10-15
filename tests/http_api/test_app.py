@@ -144,3 +144,54 @@ def test_production_module_is_registered_on_app_startup(tmp_path):
     assert row["name"] == "Production"
     assert row["version"] == "1.3.25"
     assert row["status"] == "REGISTERED"
+
+
+def test_password_reset_required_preserves_reset_flow_and_blocks_current_user(
+    tmp_path,
+):
+    client, organisation = build_client(tmp_path)
+    core_api = client.app.state.core_api
+
+    user_row = core_api.db.execute(
+        "SELECT id FROM users WHERE username=?",
+        ("test.user",),
+    ).fetchone()
+    assert user_row is not None
+
+    core_api.authentication_service.require_password_reset(
+        __import__("uuid").UUID(user_row["id"])
+    )
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "test.user",
+            "password": "test-password",
+        },
+    )
+    assert login.status_code == 200
+    assert login.json()["data"]["password_reset_required"] is True
+
+    context = client.get("/api/v1/baseline/context")
+    assert context.status_code == 200
+
+    blocked = client.get(
+        "/api/v1/me",
+        headers={ORGANISATION_HEADER: str(organisation.id)},
+    )
+    assert blocked.status_code in {401, 403}
+
+    changed = client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "current_password": "test-password",
+            "new_password": "NewStrongPassword123!",
+        },
+    )
+    assert changed.status_code == 200
+
+    allowed = client.get(
+        "/api/v1/me",
+        headers={ORGANISATION_HEADER: str(organisation.id)},
+    )
+    assert allowed.status_code == 200

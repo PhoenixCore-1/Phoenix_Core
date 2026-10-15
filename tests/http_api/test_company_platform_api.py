@@ -224,9 +224,71 @@ def test_company_cannot_mutate_role_from_another_organisation(tmp_path):
 
 
 
+def test_company_platform_blocks_user_with_pending_password_reset(tmp_path):
+    client, organisation, core = build_client(tmp_path)
+    headers = login(client, organisation)
 
+    user_row = core.db.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE username=?
+        """,
+        ("test.user",),
+    ).fetchone()
 
+    assert user_row is not None
 
+    # Set the reset flag without revoking the active session.
+    # This isolates the HTTP authorization enforcement.
+    core.db.execute(
+        """
+        UPDATE users
+        SET password_reset_required=1
+        WHERE id=?
+        """,
+        (user_row["id"],),
+    )
+    core.db.commit()
 
+    response = client.get(
+        "/api/v1/company/users",
+        headers=headers,
+    )
 
+    assert response.status_code == 403, (
+        f"Expected 403 for pending password reset, got {response.status_code}"
+    )
 
+def test_password_reset_blocks_organisation_permissions_and_entitlements(
+    tmp_path,
+):
+    client, organisation, core_api = build_client(tmp_path)
+    headers = login(client, organisation)
+
+    user_row = core_api.db.execute(
+        "SELECT id FROM users WHERE username=?",
+        ("test.user",),
+    ).fetchone()
+    assert user_row is not None
+
+    # Set the reset flag without revoking the active session.
+    core_api.db.execute(
+        """
+        UPDATE users
+        SET password_reset_required=1
+        WHERE id=?
+        """,
+        (user_row["id"],),
+    )
+    core_api.db.commit()
+
+    for endpoint in (
+        "/api/v1/me/organisation",
+        "/api/v1/me/permissions",
+        "/api/v1/me/entitlements",
+    ):
+        response = client.get(endpoint, headers=headers)
+        assert response.status_code == 403, (
+            f"{endpoint}: expected 403, got {response.status_code}"
+        )

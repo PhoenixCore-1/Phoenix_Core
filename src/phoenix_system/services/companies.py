@@ -90,7 +90,8 @@ def get_system_company(
     ).fetchone()
 
     if not company:
-        raise ValidationError("Company not found.")
+        raise ValidationError("Company not found or inactive.")
+
 
     modules = api.db.execute(
         "SELECT m.id,m.code,m.name,m.version,"
@@ -395,10 +396,6 @@ def suspend_system_company_module(
             "status": updated.status,
         }
     }
-from uuid import UUID
-from fastapi import Request
-from phoenix_core.errors import AuthorizationError, ValidationError
-
 async def create_system_company_admin(request: Request, organisation_id: UUID):
     api, user, org = _session_context(request)
 
@@ -412,6 +409,23 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
 
     if not company:
         raise ValidationError("Company not found or inactive.")
+
+    role = api.db.execute(
+        """
+        SELECT id
+        FROM roles
+        WHERE organisation_id=?
+          AND code='COMPANY.ADMIN'
+          AND scope='ORGANISATION'
+          AND status='ACTIVE'
+        """,
+        (str(organisation_id),),
+    ).fetchone()
+
+    if not role:
+        raise ValidationError(
+            "Protected COMPANY.ADMIN role is not configured for this company."
+        )
 
     p = await request.json()
     username = str(p.get("username", "")).strip()
@@ -455,22 +469,6 @@ async def create_system_company_admin(request: Request, organisation_id: UUID):
             "Company Admin membership could not be established."
         )
 
-    role = api.db.execute(
-        """
-        SELECT id
-        FROM roles
-        WHERE organisation_id=?
-          AND code='COMPANY.ADMIN'
-          AND scope='ORGANISATION'
-          AND status='ACTIVE'
-        """,
-        (str(organisation_id),),
-    ).fetchone()
-
-    if not role:
-        raise ValidationError(
-            "Protected COMPANY.ADMIN role is not configured for this company."
-        )
 
     api.role_service.assign_protected_company_admin(
         UUID(str(membership["id"])),
@@ -651,5 +649,3 @@ def get_system_company_admin(
             "admin": dict(admin),
         }
     }
-
-
